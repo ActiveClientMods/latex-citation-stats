@@ -4,11 +4,11 @@
   "description": "Real-time citation manager and tracker for LaTeX. Fully offline.",
   "license": "MIT",
   "version": "1.0.0",
-  "publisher": "your-publisher-id",
+  "publisher": "ActiveClientMods",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/latex-citation-stats.git"
+    "url": "https://github.com/ActiveClientMods/latex-citation-stats.git"
   },
   "engines": {
     "vscode": "^1.125.0"
@@ -103,6 +103,7 @@
     "vsce:package": "bunx @vscode/vsce package --no-dependencies",
     "vsce:publish": "bunx @vscode/vsce publish --no-dependencies",
     "vsce:login": "bunx @vscode/vsce login",
+    "vsce:verify": "bunx @vscode/vsce verify-pat",
     "ovsx:publish": "bunx ovsx publish --no-dependencies"
   },
   "devDependencies": {
