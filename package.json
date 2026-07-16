@@ -1,0 +1,124 @@
+{
+  "name": "latex-citation-stats",
+  "displayName": "LaTeX Citation Stats",
+  "description": "Real-time citation manager and tracker for LaTeX. Fully offline.",
+  "license": "MIT",
+  "version": "1.0.0",
+  "publisher": "your-publisher-id",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/latex-citation-stats.git"
+  },
+  "engines": {
+    "vscode": "^1.125.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.bib",
+    "workspaceContains:**/*.tex"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "latexCitationStats",
+          "title": "LaTeX Citations",
+          "icon": "media/citation.svg"
+        }
+      ]
+    },
+    "views": {
+      "latexCitationStats": [
+        {
+          "id": "latexCitationStats.view",
+          "name": "Citations",
+          "icon": "media/citation.svg",
+          "contextualTitle": "LaTeX Citations"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "latexCitationStats.view",
+        "contents": "No BibTeX entries found yet.\nOpen a workspace containing .bib and .tex files to see your citation usage here."
+      }
+    ],
+    "commands": [
+      {
+        "command": "latex-citation-stats.refresh",
+        "title": "Refresh Citations",
+        "category": "LaTeX Citations",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "latex-citation-stats.openCitation",
+        "title": "Open Citation",
+        "category": "LaTeX Citations"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "latex-citation-stats.refresh",
+          "when": "view == latexCitationStats.view",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "latex-citation-stats.openCitation",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "LaTeX Citation Stats",
+      "properties": {
+        "latex-citation-stats.debounceDelay": {
+          "type": "number",
+          "default": 250,
+          "minimum": 0,
+          "markdownDescription": "Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "bun run package",
+    "compile": "bun run check-types && bun run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "bun run check-types && bun run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "bun run compile-tests && bun run compile && bun run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "vsce:package": "bunx @vscode/vsce package --no-dependencies",
+    "vsce:publish": "bunx @vscode/vsce publish --no-dependencies",
+    "vsce:login": "bunx @vscode/vsce login",
+    "ovsx:publish": "bunx ovsx publish --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.125.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "typescript-eslint": "^8.61.1",
+    "eslint": "^10.5.0",
+    "esbuild": "^0.28.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^6.0.3",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  }
+}

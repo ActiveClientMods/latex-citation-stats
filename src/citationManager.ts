@@ -1,0 +1,186 @@
+import * as vscode from 'vscode';
+import { CitationIndex } from './citationIndex.js';
+import { CitationTreeProvider } from './citationTreeProvider.js';
+import { parseBib } from './parsers/bibParser.js';
+import { parseTex } from './parsers/texParser.js';
+import { KeyedDebouncer } from './util/debounce.js';
+import { OPEN_CITATION_COMMAND, REFRESH_COMMAND, openCitation } from './commands.js';
+
+const VIEW_ID = 'latexCitationStats.view';
+const BIB_GLOB = '**/*.bib';
+const TEX_GLOB = '**/*.tex';
+const DEFAULT_DEBOUNCE_MS = 250;
+
+/**
+ * Owns the full lifecycle: builds the index, drives the tree, and keeps both in
+ * sync with the workspace via file watchers and (debounced) live-edit events.
+ * Everything it creates is registered on the extension context for disposal.
+ */
+export class CitationManager {
+	/** The live citation cache. Exposed read-mostly for the extension API and tests. */
+	readonly index = new CitationIndex();
+	private readonly treeProvider: CitationTreeProvider;
+	private readonly debouncer: KeyedDebouncer;
+	// Coalesces many index updates into a single tree repaint per debounce tick.
+	private refreshScheduled = false;
+
+	constructor(context: vscode.ExtensionContext) {
+		this.treeProvider = new CitationTreeProvider(this.index);
+		this.debouncer = new KeyedDebouncer(this.debounceDelay());
+
+		const view = vscode.window.createTreeView(VIEW_ID, {
+			treeDataProvider: this.treeProvider,
+			showCollapseAll: true,
+		});
+
+		context.subscriptions.push(
+			view,
+			{ dispose: () => this.debouncer.dispose() },
+			vscode.commands.registerCommand(OPEN_CITATION_COMMAND, openCitation),
+			vscode.commands.registerCommand(REFRESH_COMMAND, () => this.fullScan()),
+			...this.createWatchers(),
+			this.createLiveEditListener(),
+		);
+
+		void this.fullScan();
+	}
+
+	private debounceDelay(): number {
+		const configured = vscode.workspace
+			.getConfiguration('latex-citation-stats')
+			.get<number>('debounceDelay', DEFAULT_DEBOUNCE_MS);
+		return Number.isFinite(configured) && configured >= 0 ? configured : DEFAULT_DEBOUNCE_MS;
+	}
+
+	// ---- Initial / full scan ----------------------------------------------
+
+	/**
+	 * Scan the whole workspace once. This is the *only* path that reads every
+	 * file; all subsequent updates are single-file deltas.
+	 */
+	private async fullScan(): Promise<void> {
+		const [bibFiles, texFiles] = await Promise.all([
+			vscode.workspace.findFiles(BIB_GLOB),
+			vscode.workspace.findFiles(TEX_GLOB),
+		]);
+
+		await Promise.all([
+			...bibFiles.map((uri) => this.reindexBib(uri)),
+			...texFiles.map((uri) => this.reindexTex(uri)),
+		]);
+
+		this.treeProvider.refresh();
+	}
+
+	// ---- Watchers (disk changes: save / create / delete / external) -------
+
+	private createWatchers(): vscode.Disposable[] {
+		const bibWatcher = vscode.workspace.createFileSystemWatcher(BIB_GLOB);
+		const texWatcher = vscode.workspace.createFileSystemWatcher(TEX_GLOB);
+
+		bibWatcher.onDidCreate((uri) => this.onDiskChange(uri, 'bib'));
+		bibWatcher.onDidChange((uri) => this.onDiskChange(uri, 'bib'));
+		bibWatcher.onDidDelete((uri) => this.onDelete(uri, 'bib'));
+
+		texWatcher.onDidCreate((uri) => this.onDiskChange(uri, 'tex'));
+		texWatcher.onDidChange((uri) => this.onDiskChange(uri, 'tex'));
+		texWatcher.onDidDelete((uri) => this.onDelete(uri, 'tex'));
+
+		return [bibWatcher, texWatcher];
+	}
+
+	private async onDiskChange(uri: vscode.Uri, kind: 'bib' | 'tex'): Promise<void> {
+		if (kind === 'bib') {
+			await this.reindexBib(uri);
+		} else {
+			await this.reindexTex(uri);
+		}
+		this.scheduleRefresh();
+	}
+
+	private onDelete(uri: vscode.Uri, kind: 'bib' | 'tex'): void {
+		this.debouncer.cancel(uri.fsPath);
+		if (kind === 'bib') {
+			this.index.removeBibFile(uri.fsPath);
+		} else {
+			this.index.removeTexFile(uri.fsPath);
+		}
+		this.scheduleRefresh();
+	}
+
+	// ---- Live edits (unsaved keystrokes) ----------------------------------
+
+	private createLiveEditListener(): vscode.Disposable {
+		return vscode.workspace.onDidChangeTextDocument((event) => {
+			const doc = event.document;
+			const kind = documentKind(doc);
+			if (!kind || event.contentChanges.length === 0) {
+				return;
+			}
+			// Debounce per file, then re-parse ONLY this document from its live
+			// in-memory text — no disk read, no workspace rescan.
+			this.debouncer.schedule(doc.uri.fsPath, () => {
+				if (kind === 'bib') {
+					this.index.updateBibFile(doc.uri.fsPath, parseBib(doc.getText(), doc.uri.fsPath));
+				} else {
+					this.index.updateTexFile(doc.uri.fsPath, parseTex(doc.getText(), doc.uri.fsPath));
+				}
+				this.treeProvider.refresh();
+			});
+		});
+	}
+
+	// ---- Single-file reindex from disk ------------------------------------
+
+	private async reindexBib(uri: vscode.Uri): Promise<void> {
+		const text = await this.readText(uri);
+		if (text !== undefined) {
+			this.index.updateBibFile(uri.fsPath, parseBib(text, uri.fsPath));
+		}
+	}
+
+	private async reindexTex(uri: vscode.Uri): Promise<void> {
+		const text = await this.readText(uri);
+		if (text !== undefined) {
+			this.index.updateTexFile(uri.fsPath, parseTex(text, uri.fsPath));
+		}
+	}
+
+	private async readText(uri: vscode.Uri): Promise<string | undefined> {
+		try {
+			const bytes = await vscode.workspace.fs.readFile(uri);
+			return Buffer.from(bytes).toString('utf8');
+		} catch {
+			// File vanished between discovery and read; safe to ignore.
+			return undefined;
+		}
+	}
+
+	// ---- Refresh coalescing -----------------------------------------------
+
+	// Batch bursts of watcher events (e.g. a multi-file save) into one repaint
+	// on the next microtask.
+	private scheduleRefresh(): void {
+		if (this.refreshScheduled) {
+			return;
+		}
+		this.refreshScheduled = true;
+		queueMicrotask(() => {
+			this.refreshScheduled = false;
+			this.treeProvider.refresh();
+		});
+	}
+}
+
+function documentKind(doc: vscode.TextDocument): 'bib' | 'tex' | undefined {
+	if (doc.uri.scheme !== 'file') {
+		return undefined;
+	}
+	if (doc.languageId === 'bibtex' || doc.fileName.endsWith('.bib')) {
+		return 'bib';
+	}
+	if (doc.languageId === 'latex' || doc.fileName.endsWith('.tex')) {
+		return 'tex';
+	}
+	return undefined;
+}
