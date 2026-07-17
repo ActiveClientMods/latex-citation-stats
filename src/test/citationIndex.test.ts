@@ -5,7 +5,7 @@ import type { BibEntry, Citation } from '../types.js';
 // --- tiny factory helpers -------------------------------------------------
 
 function entry(key: string, filePath = '/ws/refs.bib', title?: string): BibEntry {
-	return { key, entryType: 'article', title, filePath, line: 0 };
+	return { key, entryType: 'article', title, filePath, line: 0, character: 0, endCharacter: key.length };
 }
 
 function cite(key: string, filePath: string, line = 0, character = 0): Citation {
@@ -121,6 +121,47 @@ suite('CitationIndex', () => {
 				['mango', 1],
 				['unused', 0],
 			]);
+			// 'alphabetical' ignores counts entirely.
+			assert.deepStrictEqual(idx.getEntriesWithCounts('alphabetical').map((e) => e.entry.key), [
+				'apple',
+				'mango',
+				'unused',
+				'zebra',
+			]);
+		});
+
+		test('getEntry resolves a declared key and returns undefined otherwise', () => {
+			const idx = new CitationIndex();
+			idx.updateBibFile('/ws/refs.bib', [entry('known', '/ws/refs.bib', 'Known Title')]);
+			assert.strictEqual(idx.getEntry('known')?.title, 'Known Title');
+			assert.strictEqual(idx.getEntry('ghost'), undefined);
+		});
+	});
+
+	suite('statistics', () => {
+		test('reports totals, used/unused split, occurrences, and undefined keys', () => {
+			const idx = new CitationIndex();
+			idx.updateBibFile('/ws/refs.bib', [entry('a'), entry('b'), entry('unused')]);
+			idx.updateTexFile('/ws/one.tex', [cite('a', '/ws/one.tex'), cite('a', '/ws/one.tex', 1), cite('b', '/ws/one.tex', 2)]);
+			idx.updateTexFile('/ws/two.tex', [cite('ghost', '/ws/two.tex')]);
+
+			assert.deepStrictEqual(idx.getStats(), {
+				totalSources: 3,
+				usedSources: 2,
+				unusedSources: 1,
+				totalCitations: 4, // includes the occurrence of the undeclared 'ghost'
+				undefinedKeys: 1,
+			});
+		});
+
+		test('an empty index reports all zeroes', () => {
+			assert.deepStrictEqual(new CitationIndex().getStats(), {
+				totalSources: 0,
+				usedSources: 0,
+				unusedSources: 0,
+				totalCitations: 0,
+				undefinedKeys: 0,
+			});
 		});
 	});
 

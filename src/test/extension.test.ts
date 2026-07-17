@@ -1,6 +1,11 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { REFRESH_COMMAND, OPEN_CITATION_COMMAND } from '../commands.js';
+import {
+	COPY_CITATION_KEY_COMMAND,
+	GO_TO_BIB_DEFINITION_COMMAND,
+	GO_TO_USAGE_COMMAND,
+	REFRESH_COMMAND,
+} from '../commands.js';
 
 /**
  * Smoke-test that the extension actually activates and wires up its
@@ -23,8 +28,9 @@ suite('Extension activation (integration)', () => {
 	test('registers its commands on activation', async () => {
 		await findExtension()?.activate();
 		const commands = await vscode.commands.getCommands(true);
-		assert.ok(commands.includes(REFRESH_COMMAND), 'refresh command should be registered');
-		assert.ok(commands.includes(OPEN_CITATION_COMMAND), 'openCitation command should be registered');
+		for (const id of [REFRESH_COMMAND, GO_TO_USAGE_COMMAND, GO_TO_BIB_DEFINITION_COMMAND, COPY_CITATION_KEY_COMMAND]) {
+			assert.ok(commands.includes(id), `${id} should be registered`);
+		}
 	});
 
 	test('activating twice is safe (idempotent)', async () => {

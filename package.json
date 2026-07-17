@@ -3,7 +3,7 @@
   "displayName": "LaTeX Citation Stats",
   "description": "Real-time citation manager and tracker for LaTeX. Fully offline.",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "ActiveClientMods",
   "icon": "media/icon.png",
   "repository": {
@@ -55,9 +55,22 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "latex-citation-stats.openCitation",
-        "title": "Open Citation",
-        "category": "LaTeX Citations"
+        "command": "latex-citation-stats.goToUsage",
+        "title": "Go to Usage",
+        "category": "LaTeX Citations",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "latex-citation-stats.goToBibDefinition",
+        "title": "Go to Bib Definition",
+        "category": "LaTeX Citations",
+        "icon": "$(book)"
+      },
+      {
+        "command": "latex-citation-stats.copyCitationKey",
+        "title": "Copy Citation Key",
+        "category": "LaTeX Citations",
+        "icon": "$(copy)"
       }
     ],
     "menus": {
@@ -68,9 +81,34 @@
           "group": "navigation"
         }
       ],
+      "view/item/context": [
+        {
+          "command": "latex-citation-stats.goToUsage",
+          "when": "view == latexCitationStats.view && viewItem =~ /^citationInstance/",
+          "group": "navigation@1"
+        },
+        {
+          "command": "latex-citation-stats.goToBibDefinition",
+          "when": "view == latexCitationStats.view && viewItem =~ /^citationEntry$|^citationEntryUnused$|^citationInstance$/",
+          "group": "navigation@2"
+        },
+        {
+          "command": "latex-citation-stats.copyCitationKey",
+          "when": "view == latexCitationStats.view && viewItem =~ /^citation(Entry|Instance|UndefinedKey)/",
+          "group": "9_cutcopypaste@1"
+        }
+      ],
       "commandPalette": [
         {
-          "command": "latex-citation-stats.openCitation",
+          "command": "latex-citation-stats.goToUsage",
+          "when": "false"
+        },
+        {
+          "command": "latex-citation-stats.goToBibDefinition",
+          "when": "false"
+        },
+        {
+          "command": "latex-citation-stats.copyCitationKey",
           "when": "false"
         }
       ]
@@ -83,6 +121,24 @@
           "default": 250,
           "minimum": 0,
           "markdownDescription": "Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant."
+        },
+        "latex-citation-stats.showOverview": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the **Overview** node with total, used, unused, and citation counts at the top of the Citations view."
+        },
+        "latex-citation-stats.sortOrder": {
+          "type": "string",
+          "default": "usage",
+          "enum": [
+            "usage",
+            "alphabetical"
+          ],
+          "enumDescriptions": [
+            "Most-cited sources first, unused last.",
+            "Sort sources by citation key (A–Z)."
+          ],
+          "markdownDescription": "How to order the sources listed in the Citations view."
         }
       }
     }

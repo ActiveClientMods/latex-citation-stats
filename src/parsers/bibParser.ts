@@ -38,17 +38,25 @@ export function parseBib(text: string, filePath: string): BibEntry[] {
 		}
 
 		const commaIdx = block.content.indexOf(',');
-		const keyPart = (commaIdx === -1 ? block.content : block.content.slice(0, commaIdx)).trim();
-		if (!keyPart) {
+		const rawKey = commaIdx === -1 ? block.content : block.content.slice(0, commaIdx);
+		const key = rawKey.trim();
+		if (!key) {
 			continue;
 		}
 
+		// Position of the key itself (not the `@type`), so navigation can land on
+		// and select it exactly.
+		const keyOffset = openBrace + 1 + (rawKey.length - rawKey.trimStart().length);
+		const position = offsetToPosition(lineIndex, keyOffset);
+
 		entries.push({
-			key: keyPart,
+			key,
 			entryType,
 			title: extractField(block.content, 'title'),
 			filePath,
-			line: offsetToPosition(lineIndex, match.index).line,
+			line: position.line,
+			character: position.character,
+			endCharacter: position.character + key.length,
 		});
 	}
 

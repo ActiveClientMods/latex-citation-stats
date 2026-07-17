@@ -43,15 +43,24 @@ suite('CitationManager end-to-end (real workspace)', () => {
 	});
 
 	test('initial workspace scan indexes .bib entries and counts citations from .tex', async () => {
-		// main.tex cites knuth1984 twice (\textcite + \cite) and lamport1994 once;
-		// its \cite{unused2000} is inside a comment and must NOT be counted.
-		await waitFor(() => api.index.getCount('knuth1984') === 2 && api.index.getCount('lamport1994') === 1);
+		// main.tex cites knuth1984 via \textcite, \cite and \cites (3 total) and
+		// lamport1994 via \parencite and \cites (2 total); its \cite{unused2000}
+		// is inside a comment and must NOT be counted.
+		await waitFor(() => api.index.getCount('knuth1984') === 3 && api.index.getCount('lamport1994') === 2);
 
 		assert.strictEqual(api.index.getCount('unused2000'), 0, 'commented citation must be ignored');
 		assert.deepStrictEqual(api.index.getUndefinedKeys(), [], 'every cited key is declared');
 
 		const keys = api.index.getEntriesWithCounts().map((e) => e.entry.key);
 		assert.ok(keys.includes('unused2000'), 'declared-but-unused entry should still appear');
+
+		assert.deepStrictEqual(api.index.getStats(), {
+			totalSources: 3,
+			usedSources: 2,
+			unusedSources: 1,
+			totalCitations: 5,
+			undefinedKeys: 0,
+		});
 	});
 
 	test('live (unsaved) edits flow through debounce into the index as a delta', async () => {
@@ -68,7 +77,11 @@ suite('CitationManager end-to-end (real workspace)', () => {
 		await waitFor(() => api.index.getCount('unused2000') === 1 && api.index.getUndefinedKeys().includes('brandNewKey'));
 
 		// The originally-counted citations are unchanged by the single-file delta.
-		assert.strictEqual(api.index.getCount('knuth1984'), 2);
-		assert.strictEqual(api.index.getCount('lamport1994'), 1);
+		assert.strictEqual(api.index.getCount('knuth1984'), 3);
+		assert.strictEqual(api.index.getCount('lamport1994'), 2);
+
+		// Stats track the edit: every source is now used, and the new key is undefined.
+		const stats = api.index.getStats();
+		assert.deepStrictEqual([stats.usedSources, stats.unusedSources, stats.undefinedKeys], [3, 0, 1]);
 	});
 });

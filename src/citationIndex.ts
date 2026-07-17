@@ -1,4 +1,4 @@
-import type { BibEntry, Citation, EntryWithCount } from './types.js';
+import type { BibEntry, Citation, CitationStats, EntryWithCount, SortOrder } from './types.js';
 
 // In-memory citation cache.
 //
@@ -118,14 +118,54 @@ export class CitationIndex {
 
 	// ---- Read model (consumed by the tree) --------------------------------
 
-	/** All declared entries with live counts, sorted most-used first, unused last. */
-	getEntriesWithCounts(): EntryWithCount[] {
+	/**
+	 * All declared entries with live counts.
+	 *
+	 * `usage` (default) sorts most-used first with unused last; `alphabetical`
+	 * sorts by key.
+	 */
+	getEntriesWithCounts(sort: SortOrder = 'usage'): EntryWithCount[] {
 		const result: EntryWithCount[] = [];
 		for (const entry of this.entriesByKey.values()) {
 			result.push({ entry, count: this.getCount(entry.key) });
 		}
-		result.sort((a, b) => b.count - a.count || a.entry.key.localeCompare(b.entry.key));
+		result.sort(
+			sort === 'alphabetical'
+				? (a, b) => a.entry.key.localeCompare(b.entry.key)
+				: (a, b) => b.count - a.count || a.entry.key.localeCompare(b.entry.key),
+		);
 		return result;
+	}
+
+	/** The declared entry for a key, if any. */
+	getEntry(key: string): BibEntry | undefined {
+		return this.entriesByKey.get(key);
+	}
+
+	/** Aggregate figures for the Overview node and the view header. */
+	getStats(): CitationStats {
+		let usedSources = 0;
+		let totalCitations = 0;
+		for (const key of this.entriesByKey.keys()) {
+			const count = this.getCount(key);
+			if (count > 0) {
+				usedSources++;
+			}
+		}
+		// Count every occurrence, including those for undeclared keys.
+		for (const byFile of this.citationsByKey.values()) {
+			for (const list of byFile.values()) {
+				totalCitations += list.length;
+			}
+		}
+		const totalSources = this.entriesByKey.size;
+		return {
+			totalSources,
+			usedSources,
+			unusedSources: totalSources - usedSources,
+			totalCitations,
+			undefinedKeys: this.getUndefinedKeys().length,
+		};
 	}
 
 	/** Total number of citations for a key across all files. */

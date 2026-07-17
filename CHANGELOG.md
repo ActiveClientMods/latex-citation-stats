@@ -1,3 +1,6 @@
+<!-- markdownlint-disable MD024 -->
+<!-- Keep a Changelog repeats Added/Fixed/Changed headings under each release. -->
+
 # Change Log
 
 All notable changes to the **LaTeX Citation Stats** extension are documented in this file.
@@ -8,6 +11,45 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 _Nothing yet._
+
+## [1.1.0] - 2026-07-17
+
+### Added
+
+- **Multicite support** — `\cites`, `\parencites`, `\textcites`, `\autocites` and friends
+  take a repeating sequence of groups, and every key is now collected:
+  `\cites[S.~12-22]{key1}[S.~1]{key2}` and `\cites[S.~12-22]{key1}{key2}` both yield two
+  citations, each with its own exact line and column.
+- **Go to Bib Definition** — clicking an **unused** source opens its declaration in the
+  `.bib` file with the key selected.
+- **Context menu** on sources and occurrences offering **Go to Usage**, **Go to Bib
+  Definition**, and **Copy Citation Key**. Occurrences of undefined keys omit the
+  definition action, since there is nothing to navigate to.
+- **Overview node** at the top of the tree showing total sources, used vs. unused, and
+  total citation occurrences across all `.tex` files.
+- **View header summary** (`12/47 used · 83 citations`) beside the view title, and an
+  **activity-bar badge** counting undefined citation keys.
+- Settings **`latex-citation-stats.showOverview`** (default `true`) and
+  **`latex-citation-stats.sortOrder`** (`usage` or `alphabetical`).
+
+### Fixed
+
+- Citation keys in `\cites`-style multicite commands were silently dropped: only the first
+  key group was read, so `\cites[S.~12-22]{key1}[S.~1]{key2}` counted `key1` but never
+  `key2`. Commas inside optional arguments (`[S.~4,6,19]`) are also never mistaken for key
+  separators.
+- `\citestyle{...}` and `\citereset` no longer count their argument as a citation, and the
+  `\nocite{*}` wildcard is no longer treated as a citation key.
+- Resolving an entry's title is now a map lookup instead of a linear scan, removing
+  quadratic work when rendering large bibliographies.
+
+### Changed
+
+- Repetition of key groups applies only to known multicite commands, so `\cite{a}{b}`
+  correctly ignores `{b}` rather than treating it as a second key.
+- The internal `latex-citation-stats.openCitation` command was replaced by
+  `latex-citation-stats.goToUsage`, alongside the new `goToBibDefinition` and
+  `copyCitationKey` commands.
 
 ## [1.0.0] - 2026-07-16
 

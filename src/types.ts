@@ -12,8 +12,12 @@ export interface BibEntry {
 	title?: string;
 	/** Absolute filesystem path of the `.bib` file that declares this entry. */
 	filePath: string;
-	/** 0-based line of the `@type{...}` declaration (for future navigation). */
+	/** 0-based line of the key in its `@type{key,` declaration. */
 	line: number;
+	/** 0-based column where the key starts. */
+	character: number;
+	/** 0-based column just past the end of the key. */
+	endCharacter: number;
 }
 
 /** A single use of a citation key inside a `.tex` file. */
@@ -39,3 +43,36 @@ export interface EntryWithCount {
 	entry: BibEntry;
 	count: number;
 }
+
+/** Aggregate figures shown in the tree's Overview node and the view header. */
+export interface CitationStats {
+	/** Unique entries declared across all `.bib` files. */
+	totalSources: number;
+	/** Declared entries cited at least once. */
+	usedSources: number;
+	/** Declared entries never cited. */
+	unusedSources: number;
+	/** Total citation occurrences across every `.tex` file. */
+	totalCitations: number;
+	/** Keys cited somewhere but declared nowhere. */
+	undefinedKeys: number;
+}
+
+/** How the source list is ordered in the tree. */
+export type SortOrder = 'usage' | 'alphabetical';
+
+/**
+ * A node in the citations tree.
+ *
+ * Lives here (rather than in the tree provider) because command handlers receive
+ * these nodes as their argument — VS Code passes the tree element to
+ * `view/item/context` commands — and putting the type here keeps `commands.ts`
+ * and `citationTreeProvider.ts` free of a circular import.
+ */
+export type TreeNode =
+	| { readonly kind: 'stats' }
+	| { readonly kind: 'statLine'; readonly label: string; readonly value: number; readonly icon: string }
+	| { readonly kind: 'entry'; readonly key: string }
+	| { readonly kind: 'undefinedRoot' }
+	| { readonly kind: 'undefinedKey'; readonly key: string }
+	| { readonly kind: 'citation'; readonly citation: Citation; readonly orphan?: boolean };

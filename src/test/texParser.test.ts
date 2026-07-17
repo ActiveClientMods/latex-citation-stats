@@ -47,6 +47,62 @@ suite('parsers/texParser', () => {
 		assert.strictEqual(parseTex('\\autocite[see][p.~5]{key}', F)[0].key, 'key');
 	});
 
+	suite('multicite commands (\\cites and friends)', () => {
+		test('collects every key from alternating [opt]{key} groups', () => {
+			//                     \cites[S.~12-22]{key1}[S.~1]{key2}
+			// indices:            0.....6........15|16 17..20 21|22..27|28 29..32
+			const cites = parseTex('\\cites[S.~12-22]{key1}[S.~1]{key2}', F);
+			assert.deepStrictEqual(cites.map((c) => [c.command, c.key, c.character]), [
+				['cites', 'key1', 17],
+				['cites', 'key2', 29],
+			]);
+		});
+
+		test('collects consecutive key groups with a single leading optional arg', () => {
+			//                     \cites[S.~12-22]{key1}{key2}
+			const cites = parseTex('\\cites[S.~12-22]{key1}{key2}', F);
+			assert.deepStrictEqual(cites.map((c) => [c.key, c.character]), [
+				['key1', 17],
+				['key2', 23],
+			]);
+		});
+
+		test('commas inside an optional argument are never treated as keys', () => {
+			//                     \cites[S.~4,6,19]{key1}
+			const cites = parseTex('\\cites[S.~4,6,19]{key1}', F);
+			assert.deepStrictEqual(cites.map((c) => [c.key, c.character]), [['key1', 18]]);
+		});
+
+		test('supports multi-key groups, per-group notes, and (multinote) prefixes', () => {
+			assert.deepStrictEqual(parseTex('\\cites{a,b}{c}', F).map((c) => c.key), ['a', 'b', 'c']);
+			assert.deepStrictEqual(
+				parseTex('\\autocites[1]{a}[S.~2-3]{b}[c]{d}', F).map((c) => c.key),
+				['a', 'b', 'd'],
+			);
+			assert.deepStrictEqual(parseTex('\\cites(pre)(post)[1]{a}{b}', F).map((c) => c.key), ['a', 'b']);
+		});
+
+		test('works across the multicite family and stops at following text', () => {
+			for (const cmd of ['cites', 'parencites', 'textcites', 'autocites', 'footcites', 'supercites', 'Textcites']) {
+				assert.deepStrictEqual(parseTex(`\\${cmd}{a}{b}`, F).map((c) => c.key), ['a', 'b'], `\\${cmd}`);
+			}
+			// A brace group that is not an argument must not be swallowed.
+			assert.deepStrictEqual(parseTex('\\cites{a}{b} and \\textbf{bold}', F).map((c) => c.key), ['a', 'b']);
+		});
+
+		test('singular commands consume exactly one group, so \\cite{a}{b} ignores {b}', () => {
+			assert.deepStrictEqual(parseTex('\\cite{a}{b}', F).map((c) => c.key), ['a']);
+		});
+
+		test('multicite keys still resolve to correct lines when spread over lines', () => {
+			const cites = parseTex('intro\n\\cites[S.~1]{a}\n  {b}', F);
+			assert.deepStrictEqual(cites.map((c) => [c.key, c.line]), [
+				['a', 1],
+				['b', 2],
+			]);
+		});
+	});
+
 	test('respects LaTeX comments while preserving offsets', () => {
 		const cases: Array<{ label: string; src: string; keys: string[]; line?: number }> = [
 			{ label: 'whole-line comment ignored, next line counted', src: '% \\cite{hidden}\n\\cite{real}', keys: ['real'], line: 1 },
@@ -76,6 +132,9 @@ suite('parsers/texParser', () => {
 			'\\cite{}', // empty braces
 			'\\cite{ , , }', // only separators/whitespace
 			'\\ref{fig:1}\\label{eq:2}\\includegraphics{img}', // non-cite commands
+			'\\citestyle{authoryear}\\citereset', // "cite" commands that take no keys
+			'\\nocite{*}', // wildcard is not a key
+			'\\cite', // command with no argument group at all
 		];
 		for (const src of none) {
 			assert.deepStrictEqual(parseTex(src, F), [], JSON.stringify(src));

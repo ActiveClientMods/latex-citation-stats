@@ -16,13 +16,20 @@ request or emits telemetry.
 - **Sources tree in the activity bar.** A dedicated **LaTeX Citations** view lists every
   entry found in your workspace `.bib` file(s).
 - **Live citation counts.** Each source shows how many times it is cited across all `.tex`
-  files. Entries are ordered most-cited first.
+  files. Entries are ordered most-cited first (or alphabetically — your choice).
+- **Overview at a glance.** An **Overview** node at the top of the tree summarises your
+  bibliography: total sources, used vs. unused, and total citation occurrences. The same
+  headline numbers appear next to the view title, and undefined keys raise a badge on the
+  activity-bar icon.
 - **Unused references stand out.** Sources with zero citations are marked `unused` with a
   distinct warning icon, so dead bibliography entries are easy to spot and prune.
 - **Expand to every occurrence.** Expanding a source reveals every individual citation
   instance as `file:line`, each with a preview of the source line.
 - **Jump to the exact spot.** Clicking an occurrence opens the `.tex` file and places the
   cursor precisely on the citation key — correct line _and_ column, with the key selected.
+  Clicking an _unused_ source jumps to its definition in the `.bib` file instead.
+- **Right-click actions.** A context menu on sources and occurrences offers **Go to
+  Usage**, **Go to Bib Definition**, and **Copy Citation Key**.
 - **Undefined citations.** Keys you cite but that don't exist in any `.bib` file are
   collected under a separate **Undefined citations** node, so broken references surface
   immediately.
@@ -36,12 +43,20 @@ request or emits telemetry.
 - **`.bib` files** — Entry types, keys, and titles are extracted with a brace-depth-aware
   scan, so nested braces in titles (e.g. `{The {LaTeX} Companion}`) are handled correctly.
   `@comment`, `@string`, and `@preamble` blocks are ignored.
-- **`.tex` files** — The whole `\...cite...` family is recognised in a single pass:
-  `\cite`, `\citep`, `\citet`, `\textcite`, `\parencite`, `\autocite`, `\footcite`,
-  `\nocite`, `\citeauthor`, capitalized biblatex variants (`\Textcite`, …), and so on.
+- **`.tex` files** — The whole `\...cite...` family is recognised: `\cite`, `\citep`,
+  `\citet`, `\textcite`, `\parencite`, `\autocite`, `\footcite`, `\nocite`,
+  `\citeauthor`, capitalized biblatex variants (`\Textcite`, …), and so on.
   - Multi-key groups such as `\cite{a, b, c}` are split into one tracked occurrence per
     key, each with its own exact column.
-  - Optional arguments (`\cite[p.~5]{key}`, `\autocite[see][p.~5]{key}`) are skipped.
+  - Optional arguments (`\cite[p.~5]{key}`, `\autocite[see][p.~5]{key}`) are skipped, and
+    commas inside them (`[S.~4,6,19]`) are never mistaken for key separators.
+  - **Multicite commands** (`\cites`, `\parencites`, `\textcites`, `\autocites`, …) take a
+    repeating sequence of groups, and every key is collected:
+    `\cites[S.~12-22]{key1}[S.~1]{key2}` and `\cites[S.~12-22]{key1}{key2}` both yield two
+    citations. Repetition applies only to these commands, so `\cite{a}{b}` correctly
+    ignores `{b}`.
+  - Commands that contain "cite" but take no keys (`\citestyle`, `\citereset`) are
+    skipped, as is the `\nocite{*}` wildcard.
   - LaTeX comments are ignored — a `% \cite{...}` is never counted, and an escaped `\%`
     does not start a comment.
 
@@ -63,20 +78,36 @@ request or emits telemetry.
 3. Browse your sources, expand them to see every occurrence, and click an occurrence to
    jump straight to it.
 
+Navigation cheat-sheet:
+
+| Action                           | Result                                        |
+| -------------------------------- | --------------------------------------------- |
+| Click a **used** source          | Expands to list every occurrence              |
+| Click an **occurrence**          | Opens the `.tex` at the exact line and column |
+| Click an **unused** source       | Opens its definition in the `.bib` file       |
+| **Right-click** any of the above | Go to Usage · Go to Bib Definition · Copy Key |
+
 Use the **Refresh** button in the view's title bar to force a full re-scan at any time.
 
 ## Extension settings
 
-| Setting                              | Type   | Default | Description                                                                                                                                            |
-| ------------------------------------ | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `latex-citation-stats.debounceDelay` | number | `250`   | Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant. |
+| Setting                              | Type    | Default   | Description                                                                                                                                            |
+| ------------------------------------ | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `latex-citation-stats.debounceDelay` | number  | `250`     | Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant. |
+| `latex-citation-stats.showOverview`  | boolean | `true`    | Show the **Overview** node with total, used, unused, and citation counts at the top of the view.                                                       |
+| `latex-citation-stats.sortOrder`     | string  | `"usage"` | Order of the source list: `usage` (most-cited first, unused last) or `alphabetical`.                                                                   |
 
 ## Commands
 
-| Command           | ID                                  | Notes                                                                                           |
-| ----------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Refresh Citations | `latex-citation-stats.refresh`      | Available from the view's title bar and the Command Palette. Triggers a full workspace re-scan. |
-| Open Citation     | `latex-citation-stats.openCitation` | Used internally by the tree to navigate to an occurrence.                                       |
+| Command              | ID                                       | Notes                                                                                           |
+| -------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Refresh Citations    | `latex-citation-stats.refresh`           | Available from the view's title bar and the Command Palette. Triggers a full workspace re-scan. |
+| Go to Usage          | `latex-citation-stats.goToUsage`         | Context menu on an occurrence; also the left-click action. Jumps to the `.tex` location.        |
+| Go to Bib Definition | `latex-citation-stats.goToBibDefinition` | Context menu on a source or occurrence; also the left-click action on unused sources.           |
+| Copy Citation Key    | `latex-citation-stats.copyCitationKey`   | Context menu on any source, occurrence, or undefined key.                                       |
+
+These three navigation/clipboard commands act on the selected tree item, so they are
+driven from the view rather than the Command Palette.
 
 ## Privacy & security
 

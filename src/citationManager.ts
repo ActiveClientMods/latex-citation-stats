@@ -4,7 +4,16 @@ import { CitationTreeProvider } from './citationTreeProvider.js';
 import { parseBib } from './parsers/bibParser.js';
 import { parseTex } from './parsers/texParser.js';
 import { KeyedDebouncer } from './util/debounce.js';
-import { OPEN_CITATION_COMMAND, REFRESH_COMMAND, openCitation } from './commands.js';
+import type { TreeNode } from './types.js';
+import {
+	COPY_CITATION_KEY_COMMAND,
+	GO_TO_BIB_DEFINITION_COMMAND,
+	GO_TO_USAGE_COMMAND,
+	REFRESH_COMMAND,
+	copyCitationKey,
+	goToBibDefinition,
+	goToUsage,
+} from './commands.js';
 
 const VIEW_ID = 'latexCitationStats.view';
 const BIB_GLOB = '**/*.bib';
@@ -20,6 +29,7 @@ export class CitationManager {
 	/** The live citation cache. Exposed read-mostly for the extension API and tests. */
 	readonly index = new CitationIndex();
 	private readonly treeProvider: CitationTreeProvider;
+	private readonly view: vscode.TreeView<TreeNode>;
 	private readonly debouncer: KeyedDebouncer;
 	// Coalesces many index updates into a single tree repaint per debounce tick.
 	private refreshScheduled = false;
@@ -28,18 +38,23 @@ export class CitationManager {
 		this.treeProvider = new CitationTreeProvider(this.index);
 		this.debouncer = new KeyedDebouncer(this.debounceDelay());
 
-		const view = vscode.window.createTreeView(VIEW_ID, {
+		this.view = vscode.window.createTreeView<TreeNode>(VIEW_ID, {
 			treeDataProvider: this.treeProvider,
 			showCollapseAll: true,
 		});
 
 		context.subscriptions.push(
-			view,
+			this.view,
 			{ dispose: () => this.debouncer.dispose() },
-			vscode.commands.registerCommand(OPEN_CITATION_COMMAND, openCitation),
 			vscode.commands.registerCommand(REFRESH_COMMAND, () => this.fullScan()),
+			vscode.commands.registerCommand(GO_TO_USAGE_COMMAND, (node: TreeNode) => goToUsage(node)),
+			vscode.commands.registerCommand(GO_TO_BIB_DEFINITION_COMMAND, (node: TreeNode) =>
+				goToBibDefinition(node, this.index),
+			),
+			vscode.commands.registerCommand(COPY_CITATION_KEY_COMMAND, (node: TreeNode) => copyCitationKey(node)),
 			...this.createWatchers(),
 			this.createLiveEditListener(),
+			this.createConfigListener(),
 		);
 
 		void this.fullScan();
@@ -69,7 +84,7 @@ export class CitationManager {
 			...texFiles.map((uri) => this.reindexTex(uri)),
 		]);
 
-		this.treeProvider.refresh();
+		this.refreshTree();
 	}
 
 	// ---- Watchers (disk changes: save / create / delete / external) -------
@@ -125,8 +140,20 @@ export class CitationManager {
 				} else {
 					this.index.updateTexFile(doc.uri.fsPath, parseTex(doc.getText(), doc.uri.fsPath));
 				}
-				this.treeProvider.refresh();
+				this.refreshTree();
 			});
+		});
+	}
+
+	/** Re-render when the view's presentation settings change. */
+	private createConfigListener(): vscode.Disposable {
+		return vscode.workspace.onDidChangeConfiguration((event) => {
+			if (
+				event.affectsConfiguration('latex-citation-stats.sortOrder') ||
+				event.affectsConfiguration('latex-citation-stats.showOverview')
+			) {
+				this.refreshTree();
+			}
 		});
 	}
 
@@ -156,7 +183,33 @@ export class CitationManager {
 		}
 	}
 
-	// ---- Refresh coalescing -----------------------------------------------
+	// ---- Refresh ----------------------------------------------------------
+
+	/** Repaint the tree and refresh the view's header summary and badge. */
+	private refreshTree(): void {
+		this.treeProvider.refresh();
+		this.updateViewChrome();
+	}
+
+	/**
+	 * Surface the headline numbers without costing a tree row: the count of
+	 * used sources sits next to the view title, and undefined keys — the only
+	 * true error state — raise a badge on the activity bar icon.
+	 */
+	private updateViewChrome(): void {
+		const stats = this.index.getStats();
+		this.view.description =
+			stats.totalSources === 0
+				? undefined
+				: `${stats.usedSources}/${stats.totalSources} used · ${stats.totalCitations} citations`;
+		this.view.badge =
+			stats.undefinedKeys > 0
+				? {
+						value: stats.undefinedKeys,
+						tooltip: `${stats.undefinedKeys} undefined citation key${stats.undefinedKeys === 1 ? '' : 's'}`,
+					}
+				: undefined;
+	}
 
 	// Batch bursts of watcher events (e.g. a multi-file save) into one repaint
 	// on the next microtask.
@@ -167,7 +220,7 @@ export class CitationManager {
 		this.refreshScheduled = true;
 		queueMicrotask(() => {
 			this.refreshScheduled = false;
-			this.treeProvider.refresh();
+			this.refreshTree();
 		});
 	}
 }

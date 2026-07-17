@@ -15,6 +15,21 @@ suite('parsers/bibParser', () => {
 		);
 	});
 
+	test('records the exact column of the key so navigation can select it', () => {
+		// "@InProceedings{Smith_2020," -> '{' at index 14, so the key starts at 15.
+		const [entry] = parseBib('@InProceedings{Smith_2020, title={X}}', F);
+		assert.deepStrictEqual([entry.character, entry.endCharacter], [15, 25]);
+
+		// Leading whitespace inside the braces is skipped: in "@article {  spaced  ,"
+		// the '{' is at index 9 and two spaces follow, so the key starts at 12.
+		const [spaced] = parseBib('@article {  spaced  , title={T}}', F);
+		assert.deepStrictEqual([spaced.key, spaced.character, spaced.endCharacter], ['spaced', 12, 18]);
+
+		// Key on a later line reports that line.
+		const [wrapped] = parseBib('@misc{\n  wrapped,\n  title={W}\n}', F);
+		assert.deepStrictEqual([wrapped.line, wrapped.character], [1, 2]);
+	});
+
 	test('extracts titles across delimiter styles and normalisation rules', () => {
 		const cases: Array<{ label: string; src: string; title: string | undefined }> = [
 			{ label: 'brace-delimited', src: '@misc{k, title = {Hello World}}', title: 'Hello World' },
