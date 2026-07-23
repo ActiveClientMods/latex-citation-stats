@@ -52,28 +52,23 @@
 	const filterMenu = $('filterMenu');
 	const sortMenu = $('sortMenu');
 
-	const FILTERS = [
-		{ id: 'all', label: 'All citations' },
-		{ id: 'used', label: 'Used only' },
-		{ id: 'unused', label: 'Unused only' },
-		{ id: 'undefined', label: 'Undefined only' },
-	];
-	const SORTS = [
-		{ id: 'count-desc', label: 'Most cited' },
-		{ id: 'count-asc', label: 'Least cited' },
-		{ sep: true },
-		{ id: 'author-asc', label: 'Author (A–Z)' },
-		{ id: 'author-desc', label: 'Author (Z–A)' },
-		{ sep: true },
-		{ id: 'title-asc', label: 'Title (A–Z)' },
-		{ id: 'title-desc', label: 'Title (Z–A)' },
-		{ sep: true },
-		{ id: 'year-desc', label: 'Year (newest first)' },
-		{ id: 'year-asc', label: 'Year (oldest first)' },
-		{ sep: true },
-		{ id: 'key-asc', label: 'Key (A–Z)' },
-		{ id: 'key-desc', label: 'Key (Z–A)' },
-	];
+	// Filter/sort options are supplied by the extension (model/viewOptions) in each
+	// update message, so labels and ids live in exactly one place.
+	let options = { filters: [], sorts: [] };
+
+	/** Turn grouped options into menu items, inserting a separator between groups. */
+	function toMenuItems(opts) {
+		const items = [];
+		let prevGroup;
+		for (const opt of opts) {
+			if (prevGroup !== undefined && opt.group !== prevGroup) {
+				items.push({ sep: true });
+			}
+			items.push({ id: opt.id, label: opt.label });
+			prevGroup = opt.group;
+		}
+		return items;
+	}
 
 	// ---- Helpers ----------------------------------------------------------
 
@@ -349,7 +344,7 @@
 	function openMenu(which) {
 		closeMenus();
 		if (which === 'filter') {
-			buildMenu(filterMenu, 'Show', FILTERS, state.filter, (id) => {
+			buildMenu(filterMenu, 'Show', toMenuItems(options.filters), state.filter, (id) => {
 				state.filter = id;
 				syncToolbar();
 				pushState();
@@ -358,7 +353,7 @@
 			filterBtn.classList.add('active');
 			filterBtn.setAttribute('aria-expanded', 'true');
 		} else {
-			buildMenu(sortMenu, 'Sort by', SORTS, state.sort, (id) => {
+			buildMenu(sortMenu, 'Sort by', toMenuItems(options.sorts), state.sort, (id) => {
 				state.sort = id;
 				syncToolbar();
 				pushState();
@@ -494,6 +489,9 @@
 			model = msg.model;
 			state = msg.state;
 			showOverview = msg.showOverview;
+			if (msg.options) {
+				options = msg.options;
+			}
 			render();
 		}
 	});

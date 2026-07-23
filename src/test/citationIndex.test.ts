@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { CitationIndex } from '../citationIndex.js';
-import type { BibEntry, Citation } from '../types.js';
+import { CitationIndex } from '../model/citationIndex.js';
+import type { BibEntry, Citation } from '../model/types.js';
 
 // --- tiny factory helpers -------------------------------------------------
 

@@ -4,8 +4,8 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { citationKeyOf, copyCitationKey, goToBibDefinition, goToUsage } from '../commands.js';
-import { CitationIndex } from '../citationIndex.js';
-import type { BibEntry, Citation, TreeNode } from '../types.js';
+import { CitationIndex } from '../model/citationIndex.js';
+import type { BibEntry, Citation, CitationNode } from '../model/types.js';
 
 suite('commands (integration)', () => {
 	let dir: string;
@@ -105,7 +105,7 @@ suite('commands (integration)', () => {
 
 	suite('copyCitationKey', () => {
 		test('copies the key from entry, citation, and undefined-key nodes', async () => {
-			const nodes: TreeNode[] = [
+			const nodes: CitationNode[] = [
 				{ kind: 'entry', key: 'fromEntry' },
 				{ kind: 'citation', citation: { ...citation(), key: 'fromCitation' } },
 				{ kind: 'undefinedKey', key: 'fromUndefined' },
@@ -117,9 +117,10 @@ suite('commands (integration)', () => {
 			}
 		});
 
-		test('does nothing for nodes without a key', async () => {
+		test('does nothing for a malformed node without a key', async () => {
 			await vscode.env.clipboard.writeText('untouched');
-			await copyCitationKey({ kind: 'stats' });
+			// A payload the webview should never send; the guard must ignore it.
+			await copyCitationKey({ kind: 'bogus' } as unknown as CitationNode);
 			assert.strictEqual(await vscode.env.clipboard.readText(), 'untouched');
 		});
 	});
@@ -128,6 +129,6 @@ suite('commands (integration)', () => {
 		assert.strictEqual(citationKeyOf({ kind: 'entry', key: 'k' }), 'k');
 		assert.strictEqual(citationKeyOf({ kind: 'undefinedKey', key: 'u' }), 'u');
 		assert.strictEqual(citationKeyOf({ kind: 'citation', citation: citation() }), 'myKey');
-		assert.strictEqual(citationKeyOf({ kind: 'undefinedRoot' }), undefined);
+		assert.strictEqual(citationKeyOf({ kind: 'bogus' } as unknown as CitationNode), undefined);
 	});
 });

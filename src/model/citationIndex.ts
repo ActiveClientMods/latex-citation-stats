@@ -116,7 +116,7 @@ export class CitationIndex {
 		}
 	}
 
-	// ---- Read model (consumed by the tree) --------------------------------
+	// ---- Read model (consumed by the view) --------------------------------
 
 	/**
 	 * All declared entries with live counts.

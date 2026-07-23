@@ -10,6 +10,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [1.2.0] - 2026-07-23
+
 ### Added
 
 - **Search bar** at the top of the Citations view with the same three toggles as VS Code's
@@ -17,7 +21,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Expression** (`.*`). Search matches each source's key, title, author, and year (and
   undefined keys), runs entirely in-memory, and invalid regular expressions are flagged
   inline instead of throwing.
-- **Filter menu** — show *all*, *used only*, *unused only*, or *undefined only*.
+- **Filter menu** — show _all_, _used only_, _unused only_, or _undefined only_.
 - **Sort menu** — order sources by citation count, author, title, year, or key, ascending
   or descending. The chosen filter, sort, and search toggles **persist across restarts**.
 - The `.bib` parser now extracts **author** and **year** fields, powering author/year
@@ -33,6 +37,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   each row rather than a native right-click menu.
 - Development tooling: switched the linter from **ESLint** to **oxlint**, and updated
   **TypeScript** to `7.0.2`.
+- Internal restructuring for maintainability: the domain model (types, index, view-model,
+  and the single-source-of-truth filter/sort options) now lives under `src/model/`, and the
+  webview provider and its HTML under `src/view/`. No behavioural change.
 
 ### Removed
 

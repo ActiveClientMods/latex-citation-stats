@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { CitationManager } from './citationManager.js';
-import type { CitationIndex } from './citationIndex.js';
+import type { CitationIndex } from './model/citationIndex.js';
 
 /**
  * Public API returned from `activate()`. Other extensions — and the integration

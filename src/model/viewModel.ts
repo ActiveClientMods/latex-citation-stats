@@ -8,22 +8,7 @@
 
 import type { BibEntry, Citation, CitationStats } from './types.js';
 import type { CitationIndex } from './citationIndex.js';
-
-/** How the source list is ordered. Persisted across restarts. */
-export type SortKey =
-	| 'count-desc'
-	| 'count-asc'
-	| 'author-asc'
-	| 'author-desc'
-	| 'title-asc'
-	| 'title-desc'
-	| 'year-desc'
-	| 'year-asc'
-	| 'key-asc'
-	| 'key-desc';
-
-/** Which subset of sources is shown. */
-export type FilterMode = 'all' | 'used' | 'unused' | 'undefined';
+import { DEFAULT_FILTER, DEFAULT_SORT, type FilterMode, type SortKey } from './viewOptions.js';
 
 /** The complete, serialisable UI state driven from the webview. */
 export interface ViewState {
@@ -45,8 +30,8 @@ export const DEFAULT_STATE: ViewState = {
 	matchCase: false,
 	matchWholeWord: false,
 	useRegex: false,
-	filter: 'all',
-	sort: 'count-desc',
+	filter: DEFAULT_FILTER,
+	sort: DEFAULT_SORT,
 };
 
 /** A declared `.bib` source, enriched for display and filtered/sorted. */
@@ -84,10 +69,20 @@ export interface ViewModel {
 }
 
 /**
- * A compiled matcher for the current query + toggles. `null` means "match
- * everything" (empty query); `{ error: true }` means the regex is invalid.
+ * A query compiled from the search box and its toggles.
+ *
+ * `active` is false for an empty query (everything matches); `error` is true
+ * when Regex mode is on but the pattern is invalid, in which case `matches`
+ * rejects everything rather than throwing.
  */
-type Matcher = ((haystack: string) => boolean) | null | { error: true };
+interface CompiledQuery {
+	readonly active: boolean;
+	readonly error: boolean;
+	matches(text: string): boolean;
+}
+
+const MATCH_ALL: CompiledQuery = { active: false, error: false, matches: () => true };
+const MATCH_NONE: CompiledQuery = { active: true, error: true, matches: () => false };
 
 /** Escape a string for literal use inside a RegExp. */
 function escapeRegExp(text: string): string {
@@ -95,56 +90,42 @@ function escapeRegExp(text: string): string {
 }
 
 /**
- * Build a predicate over a single string field from the query and toggles.
- * Whole-word and regex modes compile to a RegExp; plain substring search uses
+ * Compile the query + toggles into a predicate over a single text field.
+ * Whole-word and regex modes use a RegExp; plain substring search uses
  * `String.includes` so it stays fast and never throws.
  */
-function compileMatcher(state: ViewState): Matcher {
-	const query = state.query;
+function compileQuery(state: ViewState): CompiledQuery {
+	const { query } = state;
 	if (query.length === 0) {
-		return null;
+		return MATCH_ALL;
 	}
 
 	if (!state.useRegex && !state.matchWholeWord) {
 		if (state.matchCase) {
-			return (haystack) => haystack.includes(query);
+			return { active: true, error: false, matches: (text) => text.includes(query) };
 		}
 		const needle = query.toLowerCase();
-		return (haystack) => haystack.toLowerCase().includes(needle);
+		return { active: true, error: false, matches: (text) => text.toLowerCase().includes(needle) };
 	}
 
 	const body = state.useRegex ? query : escapeRegExp(query);
 	const pattern = state.matchWholeWord ? `\\b(?:${body})\\b` : body;
 	try {
 		const re = new RegExp(pattern, state.matchCase ? 'u' : 'iu');
-		return (haystack) => re.test(haystack);
+		return { active: true, error: false, matches: (text) => re.test(text) };
 	} catch {
-		return { error: true };
+		return MATCH_NONE;
 	}
 }
 
-/** The searchable text fields of a declared entry. */
-function entryFields(entry: BibEntry): string[] {
-	const fields = [entry.key];
-	if (entry.title) {
-		fields.push(entry.title);
-	}
-	if (entry.author) {
-		fields.push(entry.author);
-	}
-	if (entry.year !== undefined) {
-		fields.push(String(entry.year));
-	}
-	return fields;
-}
-
-function anyFieldMatches(fields: string[], match: (h: string) => boolean): boolean {
-	for (const field of fields) {
-		if (match(field)) {
-			return true;
-		}
-	}
-	return false;
+/** True if the query matches any of a declared entry's searchable text fields. */
+function entryMatches(entry: BibEntry, query: CompiledQuery): boolean {
+	return (
+		query.matches(entry.key) ||
+		(entry.title !== undefined && query.matches(entry.title)) ||
+		(entry.author !== undefined && query.matches(entry.author)) ||
+		(entry.year !== undefined && query.matches(String(entry.year)))
+	);
 }
 
 /**
@@ -237,11 +218,7 @@ function compareEntries(sort: SortKey): (a: EntryRow, b: EntryRow) => number {
  * filter to the declared entries and the undefined keys, then sort the entries.
  */
 export function buildViewModel(index: CitationIndex, state: ViewState): ViewModel {
-	const matcher = compileMatcher(state);
-	const regexError = matcher !== null && typeof matcher === 'object';
-	// On an invalid regex, match nothing rather than everything.
-	const match: ((h: string) => boolean) | null = regexError ? () => false : (matcher as ((h: string) => boolean) | null);
-
+	const query = compileQuery(state);
 	const stats = index.getStats();
 	const showUndefined = state.filter === 'all' || state.filter === 'undefined';
 	const showEntries = state.filter !== 'undefined';
@@ -256,7 +233,7 @@ export function buildViewModel(index: CitationIndex, state: ViewState): ViewMode
 			if (state.filter === 'unused' && used) {
 				continue;
 			}
-			if (match && !anyFieldMatches(entryFields(entry), match)) {
+			if (!entryMatches(entry, query)) {
 				continue;
 			}
 			entries.push({
@@ -275,7 +252,7 @@ export function buildViewModel(index: CitationIndex, state: ViewState): ViewMode
 	const undefinedKeys: UndefinedRow[] = [];
 	if (showUndefined) {
 		for (const key of index.getUndefinedKeys()) {
-			if (match && !match(key)) {
+			if (!query.matches(key)) {
 				continue;
 			}
 			undefinedKeys.push({ key, count: index.getCount(key), occurrences: index.getCitations(key) });
@@ -289,7 +266,7 @@ export function buildViewModel(index: CitationIndex, state: ViewState): ViewMode
 		undefinedKeys,
 		visibleSources: entries.length,
 		totalSources: stats.totalSources,
-		regexError,
+		regexError: query.error,
 		filtering: state.query.length > 0 || state.filter !== 'all',
 	};
 }

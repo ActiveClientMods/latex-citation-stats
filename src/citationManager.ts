@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { CitationIndex } from './citationIndex.js';
-import { CitationViewProvider } from './citationViewProvider.js';
+import { CitationIndex } from './model/citationIndex.js';
+import { CitationViewProvider } from './view/citationViewProvider.js';
 import { parseBib } from './parsers/bibParser.js';
 import { parseTex } from './parsers/texParser.js';
 import { KeyedDebouncer } from './util/debounce.js';
-import type { TreeNode } from './types.js';
+import type { CitationNode } from './model/types.js';
 import {
 	COPY_CITATION_KEY_COMMAND,
 	GO_TO_BIB_DEFINITION_COMMAND,
@@ -21,7 +21,7 @@ const TEX_GLOB = '**/*.tex';
 const DEFAULT_DEBOUNCE_MS = 250;
 
 /**
- * Owns the full lifecycle: builds the index, drives the tree, and keeps both in
+ * Owns the full lifecycle: builds the index, drives the view, and keeps both in
  * sync with the workspace via file watchers and (debounced) live-edit events.
  * Everything it creates is registered on the extension context for disposal.
  */
@@ -43,11 +43,11 @@ export class CitationManager {
 			}),
 			{ dispose: () => this.debouncer.dispose() },
 			vscode.commands.registerCommand(REFRESH_COMMAND, () => this.fullScan()),
-			vscode.commands.registerCommand(GO_TO_USAGE_COMMAND, (node: TreeNode) => goToUsage(node)),
-			vscode.commands.registerCommand(GO_TO_BIB_DEFINITION_COMMAND, (node: TreeNode) =>
+			vscode.commands.registerCommand(GO_TO_USAGE_COMMAND, (node: CitationNode) => goToUsage(node)),
+			vscode.commands.registerCommand(GO_TO_BIB_DEFINITION_COMMAND, (node: CitationNode) =>
 				goToBibDefinition(node, this.index),
 			),
-			vscode.commands.registerCommand(COPY_CITATION_KEY_COMMAND, (node: TreeNode) => copyCitationKey(node)),
+			vscode.commands.registerCommand(COPY_CITATION_KEY_COMMAND, (node: CitationNode) => copyCitationKey(node)),
 			...this.createWatchers(),
 			this.createLiveEditListener(),
 			this.createConfigListener(),
@@ -80,7 +80,7 @@ export class CitationManager {
 			...texFiles.map((uri) => this.reindexTex(uri)),
 		]);
 
-		this.refreshTree();
+		this.repaint();
 	}
 
 	// ---- Watchers (disk changes: save / create / delete / external) -------
@@ -136,7 +136,7 @@ export class CitationManager {
 				} else {
 					this.index.updateTexFile(doc.uri.fsPath, parseTex(doc.getText(), doc.uri.fsPath));
 				}
-				this.refreshTree();
+				this.repaint();
 			});
 		});
 	}
@@ -145,7 +145,7 @@ export class CitationManager {
 	private createConfigListener(): vscode.Disposable {
 		return vscode.workspace.onDidChangeConfiguration((event) => {
 			if (event.affectsConfiguration('latex-citation-stats.showOverview')) {
-				this.refreshTree();
+				this.repaint();
 			}
 		});
 	}
@@ -179,7 +179,7 @@ export class CitationManager {
 	// ---- Refresh ----------------------------------------------------------
 
 	/** Repaint the view and refresh its header summary and badge. */
-	private refreshTree(): void {
+	private repaint(): void {
 		this.viewProvider.refresh();
 	}
 
@@ -192,7 +192,7 @@ export class CitationManager {
 		this.refreshScheduled = true;
 		queueMicrotask(() => {
 			this.refreshScheduled = false;
-			this.refreshTree();
+			this.repaint();
 		});
 	}
 }

@@ -1,7 +1,7 @@
 import * as assert from 'assert';
-import { CitationIndex } from '../citationIndex.js';
-import { DEFAULT_STATE, authorSortKey, buildViewModel, type ViewState } from '../viewModel.js';
-import type { BibEntry, Citation } from '../types.js';
+import { CitationIndex } from '../model/citationIndex.js';
+import { DEFAULT_STATE, authorSortKey, buildViewModel, type ViewState } from '../model/viewModel.js';
+import type { BibEntry, Citation } from '../model/types.js';
 
 function entry(key: string, extra: Partial<BibEntry> = {}): BibEntry {
 	return { key, entryType: 'article', filePath: '/ws/refs.bib', line: 0, character: 0, endCharacter: key.length, ...extra };

@@ -1,4 +1,4 @@
-import type { Citation } from '../types.js';
+import type { Citation } from '../model/types.js';
 import { buildLineIndex, getLineText, offsetToPosition, type LineIndex } from '../util/position.js';
 
 // `.tex` citation parser.

@@ -38,17 +38,17 @@ export interface Citation {
 	character: number;
 	/** 0-based column just past the end of the key. */
 	endCharacter: number;
-	/** Trimmed source line, shown as a preview in the tree. */
+	/** Trimmed source line, shown as a preview under the occurrence. */
 	lineText: string;
 }
 
-/** A `.bib` entry paired with its live citation count, for the tree root. */
+/** A `.bib` entry paired with its live citation count, for the source list. */
 export interface EntryWithCount {
 	entry: BibEntry;
 	count: number;
 }
 
-/** Aggregate figures shown in the tree's Overview node and the view header. */
+/** Aggregate figures shown in the Overview node and the view header. */
 export interface CitationStats {
 	/** Unique entries declared across all `.bib` files. */
 	totalSources: number;
@@ -62,22 +62,18 @@ export interface CitationStats {
 	undefinedKeys: number;
 }
 
-/** How the source list is ordered in the tree. */
+/** How the source list is ordered by the index's read model. */
 export type SortOrder = 'usage' | 'alphabetical';
 
 /**
- * A node in the citations tree.
+ * A reference to something in the citations view that a command can act on.
  *
- * Command handlers accept these nodes as their argument: the citation webview
- * builds node-shaped payloads ({ kind: 'citation', citation }, { kind: 'entry',
- * key }) when it asks the extension to navigate or copy, so a single set of
- * handlers in `commands.ts` serves the view. Keeping the type here keeps
- * `commands.ts` and the view provider free of a circular import.
+ * The webview builds these payloads ({ kind: 'entry', key }, { kind: 'citation',
+ * citation }, …) when it asks the extension to navigate or copy, so a single set
+ * of handlers in `commands.ts` serves every row type. Keeping the type here
+ * keeps `commands.ts` and the view provider free of a circular import.
  */
-export type TreeNode =
-	| { readonly kind: 'stats' }
-	| { readonly kind: 'statLine'; readonly label: string; readonly value: number; readonly icon: string }
+export type CitationNode =
 	| { readonly kind: 'entry'; readonly key: string }
-	| { readonly kind: 'undefinedRoot' }
 	| { readonly kind: 'undefinedKey'; readonly key: string }
-	| { readonly kind: 'citation'; readonly citation: Citation; readonly orphan?: boolean };
+	| { readonly kind: 'citation'; readonly citation: Citation };

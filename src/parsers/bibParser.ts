@@ -1,4 +1,4 @@
-import type { BibEntry } from '../types.js';
+import type { BibEntry } from '../model/types.js';
 import { buildLineIndex, offsetToPosition } from '../util/position.js';
 
 // `.bib` parser.
