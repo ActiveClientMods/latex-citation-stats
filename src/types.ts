@@ -8,8 +8,12 @@ export interface BibEntry {
 	key: string;
 	/** The BibTeX entry type, lower-cased, e.g. `article`, `book`. */
 	entryType: string;
-	/** Optional human-readable title, used to enrich the tree label. */
+	/** Optional human-readable title, used to enrich the label and to search/sort by. */
 	title?: string;
+	/** Optional raw `author` field, used to search and to sort by author name. */
+	author?: string;
+	/** Optional publication year parsed from the `year` field, used to search and sort. */
+	year?: number;
 	/** Absolute filesystem path of the `.bib` file that declares this entry. */
 	filePath: string;
 	/** 0-based line of the key in its `@type{key,` declaration. */
@@ -64,10 +68,11 @@ export type SortOrder = 'usage' | 'alphabetical';
 /**
  * A node in the citations tree.
  *
- * Lives here (rather than in the tree provider) because command handlers receive
- * these nodes as their argument — VS Code passes the tree element to
- * `view/item/context` commands — and putting the type here keeps `commands.ts`
- * and `citationTreeProvider.ts` free of a circular import.
+ * Command handlers accept these nodes as their argument: the citation webview
+ * builds node-shaped payloads ({ kind: 'citation', citation }, { kind: 'entry',
+ * key }) when it asks the extension to navigate or copy, so a single set of
+ * handlers in `commands.ts` serves the view. Keeping the type here keeps
+ * `commands.ts` and the view provider free of a circular import.
  */
 export type TreeNode =
 	| { readonly kind: 'stats' }

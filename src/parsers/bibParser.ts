@@ -53,6 +53,8 @@ export function parseBib(text: string, filePath: string): BibEntry[] {
 			key,
 			entryType,
 			title: extractField(block.content, 'title'),
+			author: extractField(block.content, 'author'),
+			year: parseYear(extractField(block.content, 'year')),
 			filePath,
 			line: position.line,
 			character: position.character,
@@ -115,4 +117,16 @@ function extractField(block: string, field: string): string | undefined {
 	// Collapse remaining braces/whitespace used for BibTeX capitalization control.
 	const cleaned = raw.replace(/[{}]/g, '').replace(/\s+/g, ' ').trim();
 	return cleaned.length > 0 ? cleaned : undefined;
+}
+
+/**
+ * Pull a 4-digit year out of a raw `year` value (`{1984}`, `1984`, `1984--1985`,
+ * or biblatex `date` remnants like `2001-05`). Returns `undefined` if none.
+ */
+function parseYear(raw: string | undefined): number | undefined {
+	if (!raw) {
+		return undefined;
+	}
+	const m = /\d{4}/.exec(raw);
+	return m ? Number(m[0]) : undefined;
 }

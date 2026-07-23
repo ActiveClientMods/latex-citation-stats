@@ -45,6 +45,23 @@ suite('parsers/bibParser', () => {
 		}
 	});
 
+	test('extracts author and a 4-digit year for searching and sorting', () => {
+		const [e] = parseBib('@article{k, title={T}, author = {Knuth, Donald E. and Bibby, Duane}, year = {1984}}', F);
+		assert.strictEqual(e.author, 'Knuth, Donald E. and Bibby, Duane');
+		assert.strictEqual(e.year, 1984);
+
+		// Year is pulled out of ranges, braces, and biblatex-style dates.
+		assert.strictEqual(parseBib('@misc{k, year = 2001}', F)[0].year, 2001);
+		assert.strictEqual(parseBib('@misc{k, year = {1999--2000}}', F)[0].year, 1999);
+		assert.strictEqual(parseBib('@misc{k, date = {2010-05}, year = {2010}}', F)[0].year, 2010);
+
+		// Missing / non-numeric fields stay undefined rather than NaN.
+		const [bare] = parseBib('@misc{k, title={T}}', F);
+		assert.strictEqual(bare.author, undefined);
+		assert.strictEqual(bare.year, undefined);
+		assert.strictEqual(parseBib('@misc{k, year = {forthcoming}}', F)[0].year, undefined);
+	});
+
 	test('ignores @comment, @string and @preamble constructs', () => {
 		const text = ['@comment{ignored}', '@string{pub = "ACM"}', '@preamble{"\\x"}', '@article{real, title={Real}}'].join('\n');
 		assert.deepStrictEqual(parseBib(text, F).map((e) => e.key), ['real']);

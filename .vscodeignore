@@ -10,7 +10,7 @@ bun.lock
 .yarnrc
 esbuild.js
 **/tsconfig.json
-**/eslint.config.mjs
+**/.oxlintrc.json
 **/*.map
 **/*.ts
 **/.vscode-test.*

@@ -13,14 +13,23 @@ request or emits telemetry.
 
 ## Features
 
-- **Sources tree in the activity bar.** A dedicated **LaTeX Citations** view lists every
+- **Search bar with Match Case, Match Whole Word, and Regex.** A search box at the top of
+  the view filters your sources as you type, with the same three toggles as VS Code's own
+  Search panel — **Match Case** (`Aa`), **Match Whole Word** (`ab`), and **Use Regular
+  Expression** (`.*`). Search runs over each entry's key, title, author, and year (and over
+  undefined keys), entirely in-memory and offline.
+- **Filter and sort menu.** A **filter** button narrows the list to *all*, *used only*,
+  *unused only*, or *undefined only*, and a **sort** button orders sources by citation
+  count, author, title, year, or key (ascending or descending). Your filter, sort, and
+  search toggles **persist across restarts**.
+- **Sources list in the activity bar.** A dedicated **LaTeX Citations** view lists every
   entry found in your workspace `.bib` file(s).
 - **Live citation counts.** Each source shows how many times it is cited across all `.tex`
-  files. Entries are ordered most-cited first (or alphabetically — your choice).
-- **Overview at a glance.** An **Overview** node at the top of the tree summarises your
+  files, ordered by the sort you pick (most-cited first by default).
+- **Overview at a glance.** An **Overview** node at the top of the view summarises your
   bibliography: total sources, used vs. unused, and total citation occurrences. The same
   headline numbers appear next to the view title, and undefined keys raise a badge on the
-  activity-bar icon.
+  activity-bar icon. (The Overview hides itself while a search or filter is active.)
 - **Unused references stand out.** Sources with zero citations are marked `unused` with a
   distinct warning icon, so dead bibliography entries are easy to spot and prune.
 - **Expand to every occurrence.** Expanding a source reveals every individual citation
@@ -28,12 +37,12 @@ request or emits telemetry.
 - **Jump to the exact spot.** Clicking an occurrence opens the `.tex` file and places the
   cursor precisely on the citation key — correct line _and_ column, with the key selected.
   Clicking an _unused_ source jumps to its definition in the `.bib` file instead.
-- **Right-click actions.** A context menu on sources and occurrences offers **Go to
-  Usage**, **Go to Bib Definition**, and **Copy Citation Key**.
+- **Row actions.** Hovering a source reveals inline **Go to Bib Definition** and **Copy
+  Citation Key** buttons; undefined keys expose **Copy Citation Key**.
 - **Undefined citations.** Keys you cite but that don't exist in any `.bib` file are
   collected under a separate **Undefined citations** node, so broken references surface
   immediately.
-- **Real-time updates.** The tree refreshes as you type in a `.tex` or `.bib` file, and
+- **Real-time updates.** The view refreshes as you type in a `.tex` or `.bib` file, and
   reacts to files being created, changed, or deleted on disk.
 
 ## How it works
@@ -75,39 +84,54 @@ request or emits telemetry.
 1. Open a folder (or multi-root workspace) that contains at least one `.bib` and one
    `.tex` file.
 2. Click the **LaTeX Citations** icon in the activity bar.
-3. Browse your sources, expand them to see every occurrence, and click an occurrence to
-   jump straight to it.
+3. Search, filter, and sort from the toolbar at the top of the view; browse your sources,
+   expand them to see every occurrence, and click an occurrence to jump straight to it.
+
+Search & filter:
+
+| Control                         | What it does                                                        |
+| ------------------------------- | ------------------------------------------------------------------- |
+| **Search box**                  | Filters sources by key, title, author, and year as you type         |
+| **`Aa` Match Case**             | Makes the search case-sensitive                                     |
+| **`ab` Match Whole Word**       | Matches whole words only                                            |
+| **`.*` Use Regular Expression** | Interprets the query as a regular expression                        |
+| **Filter** button               | All · Used only · Unused only · Undefined only                      |
+| **Sort** button                 | Citation count · Author · Title · Year · Key (ascending/descending) |
+
+The filter, sort, and search-toggle choices persist across VS Code restarts.
 
 Navigation cheat-sheet:
 
-| Action                           | Result                                        |
-| -------------------------------- | --------------------------------------------- |
-| Click a **used** source          | Expands to list every occurrence              |
-| Click an **occurrence**          | Opens the `.tex` at the exact line and column |
-| Click an **unused** source       | Opens its definition in the `.bib` file       |
-| **Right-click** any of the above | Go to Usage · Go to Bib Definition · Copy Key |
+| Action                     | Result                                        |
+| -------------------------- | --------------------------------------------- |
+| Click a **used** source    | Expands to list every occurrence              |
+| Click an **occurrence**    | Opens the `.tex` at the exact line and column |
+| Click an **unused** source | Opens its definition in the `.bib` file       |
+| **Hover** a source         | Reveals Go to Bib Definition · Copy Key       |
 
 Use the **Refresh** button in the view's title bar to force a full re-scan at any time.
 
 ## Extension settings
 
-| Setting                              | Type    | Default   | Description                                                                                                                                            |
-| ------------------------------------ | ------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `latex-citation-stats.debounceDelay` | number  | `250`     | Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant. |
-| `latex-citation-stats.showOverview`  | boolean | `true`    | Show the **Overview** node with total, used, unused, and citation counts at the top of the view.                                                       |
-| `latex-citation-stats.sortOrder`     | string  | `"usage"` | Order of the source list: `usage` (most-cited first, unused last) or `alphabetical`.                                                                   |
+| Setting                              | Type    | Default | Description                                                                                                                                            |
+| ------------------------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `latex-citation-stats.debounceDelay` | number  | `250`   | Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant. |
+| `latex-citation-stats.showOverview`  | boolean | `true`  | Show the **Overview** node with total, used, unused, and citation counts at the top of the view.                                                       |
+
+Sorting and filtering are controlled from the view's toolbar (and remembered across
+restarts) rather than from settings.
 
 ## Commands
 
 | Command              | ID                                       | Notes                                                                                           |
 | -------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Refresh Citations    | `latex-citation-stats.refresh`           | Available from the view's title bar and the Command Palette. Triggers a full workspace re-scan. |
-| Go to Usage          | `latex-citation-stats.goToUsage`         | Context menu on an occurrence; also the left-click action. Jumps to the `.tex` location.        |
-| Go to Bib Definition | `latex-citation-stats.goToBibDefinition` | Context menu on a source or occurrence; also the left-click action on unused sources.           |
-| Copy Citation Key    | `latex-citation-stats.copyCitationKey`   | Context menu on any source, occurrence, or undefined key.                                       |
+| Go to Usage          | `latex-citation-stats.goToUsage`         | Left-click action on an occurrence. Jumps to the `.tex` location.                               |
+| Go to Bib Definition | `latex-citation-stats.goToBibDefinition` | Hover-action on a source; also the left-click action on unused sources.                         |
+| Copy Citation Key    | `latex-citation-stats.copyCitationKey`   | Hover-action on any source or undefined key.                                                    |
 
-These three navigation/clipboard commands act on the selected tree item, so they are
-driven from the view rather than the Command Palette.
+These three navigation/clipboard commands are driven from the view rather than the Command
+Palette.
 
 ## Privacy & security
 

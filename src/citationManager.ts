@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { CitationIndex } from './citationIndex.js';
-import { CitationTreeProvider } from './citationTreeProvider.js';
+import { CitationViewProvider } from './citationViewProvider.js';
 import { parseBib } from './parsers/bibParser.js';
 import { parseTex } from './parsers/texParser.js';
 import { KeyedDebouncer } from './util/debounce.js';
@@ -28,23 +28,19 @@ const DEFAULT_DEBOUNCE_MS = 250;
 export class CitationManager {
 	/** The live citation cache. Exposed read-mostly for the extension API and tests. */
 	readonly index = new CitationIndex();
-	private readonly treeProvider: CitationTreeProvider;
-	private readonly view: vscode.TreeView<TreeNode>;
+	private readonly viewProvider: CitationViewProvider;
 	private readonly debouncer: KeyedDebouncer;
-	// Coalesces many index updates into a single tree repaint per debounce tick.
+	// Coalesces many index updates into a single view repaint per debounce tick.
 	private refreshScheduled = false;
 
 	constructor(context: vscode.ExtensionContext) {
-		this.treeProvider = new CitationTreeProvider(this.index);
+		this.viewProvider = new CitationViewProvider(this.index, context);
 		this.debouncer = new KeyedDebouncer(this.debounceDelay());
 
-		this.view = vscode.window.createTreeView<TreeNode>(VIEW_ID, {
-			treeDataProvider: this.treeProvider,
-			showCollapseAll: true,
-		});
-
 		context.subscriptions.push(
-			this.view,
+			vscode.window.registerWebviewViewProvider(VIEW_ID, this.viewProvider, {
+				webviewOptions: { retainContextWhenHidden: true },
+			}),
 			{ dispose: () => this.debouncer.dispose() },
 			vscode.commands.registerCommand(REFRESH_COMMAND, () => this.fullScan()),
 			vscode.commands.registerCommand(GO_TO_USAGE_COMMAND, (node: TreeNode) => goToUsage(node)),
@@ -148,10 +144,7 @@ export class CitationManager {
 	/** Re-render when the view's presentation settings change. */
 	private createConfigListener(): vscode.Disposable {
 		return vscode.workspace.onDidChangeConfiguration((event) => {
-			if (
-				event.affectsConfiguration('latex-citation-stats.sortOrder') ||
-				event.affectsConfiguration('latex-citation-stats.showOverview')
-			) {
+			if (event.affectsConfiguration('latex-citation-stats.showOverview')) {
 				this.refreshTree();
 			}
 		});
@@ -185,30 +178,9 @@ export class CitationManager {
 
 	// ---- Refresh ----------------------------------------------------------
 
-	/** Repaint the tree and refresh the view's header summary and badge. */
+	/** Repaint the view and refresh its header summary and badge. */
 	private refreshTree(): void {
-		this.treeProvider.refresh();
-		this.updateViewChrome();
-	}
-
-	/**
-	 * Surface the headline numbers without costing a tree row: the count of
-	 * used sources sits next to the view title, and undefined keys — the only
-	 * true error state — raise a badge on the activity bar icon.
-	 */
-	private updateViewChrome(): void {
-		const stats = this.index.getStats();
-		this.view.description =
-			stats.totalSources === 0
-				? undefined
-				: `${stats.usedSources}/${stats.totalSources} used · ${stats.totalCitations} citations`;
-		this.view.badge =
-			stats.undefinedKeys > 0
-				? {
-						value: stats.undefinedKeys,
-						tooltip: `${stats.undefinedKeys} undefined citation key${stats.undefinedKeys === 1 ? '' : 's'}`,
-					}
-				: undefined;
+		this.viewProvider.refresh();
 	}
 
 	// Batch bursts of watcher events (e.g. a multi-file save) into one repaint

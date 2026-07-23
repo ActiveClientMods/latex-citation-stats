@@ -10,7 +10,34 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- **Search bar** at the top of the Citations view with the same three toggles as VS Code's
+  Search panel: **Match Case** (`Aa`), **Match Whole Word** (`ab`), and **Use Regular
+  Expression** (`.*`). Search matches each source's key, title, author, and year (and
+  undefined keys), runs entirely in-memory, and invalid regular expressions are flagged
+  inline instead of throwing.
+- **Filter menu** — show *all*, *used only*, *unused only*, or *undefined only*.
+- **Sort menu** — order sources by citation count, author, title, year, or key, ascending
+  or descending. The chosen filter, sort, and search toggles **persist across restarts**.
+- The `.bib` parser now extracts **author** and **year** fields, powering author/year
+  search and sort.
+
+### Changed
+
+- The Citations view is now rendered as a **webview** instead of a native tree, so the
+  search bar and filter/sort controls can live inside the view. Existing behaviour is
+  preserved: the Overview node, live counts, unused/undefined markers, click-to-navigate,
+  and the header summary + activity-bar badge all carry over. Source and undefined-key
+  actions (**Go to Bib Definition**, **Copy Citation Key**) are now inline hover buttons on
+  each row rather than a native right-click menu.
+- Development tooling: switched the linter from **ESLint** to **oxlint**, and updated
+  **TypeScript** to `7.0.2`.
+
+### Removed
+
+- The `latex-citation-stats.sortOrder` setting. Sorting is now controlled from the view's
+  toolbar (with more orders than before) and remembered across restarts.
 
 ## [1.1.0] - 2026-07-17
 
