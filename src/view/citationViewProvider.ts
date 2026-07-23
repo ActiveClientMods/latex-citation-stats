@@ -12,7 +12,7 @@ import { citationViewHtml } from './webviewContent.js';
 // module; this class is the thin shell that owns the persisted UI state, renders
 // the HTML, and shuttles messages between the webview and the extension.
 
-const STATE_KEY = 'latex-citation-stats.viewState';
+const STATE_KEY = 'latex-citation-statistics.viewState';
 
 /** Persisted slice of the UI state — everything except the transient query. */
 type PersistedState = Omit<ViewState, 'query'>;
@@ -100,7 +100,7 @@ export class CitationViewProvider implements vscode.WebviewViewProvider {
 		}
 		const model = buildViewModel(this.index, this.state);
 		const showOverview = vscode.workspace
-			.getConfiguration('latex-citation-stats')
+			.getConfiguration('latex-citation-statistics')
 			.get<boolean>('showOverview', true);
 		void this.view.webview.postMessage({
 			type: 'update',

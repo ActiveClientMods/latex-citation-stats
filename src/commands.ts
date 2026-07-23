@@ -4,10 +4,10 @@ import type { CitationIndex } from './model/citationIndex.js';
 
 // Command IDs are defined once here and reused by the view provider, the
 // manager, and the package.json contributions, so they never drift out of sync.
-export const GO_TO_USAGE_COMMAND = 'latex-citation-stats.goToUsage';
-export const GO_TO_BIB_DEFINITION_COMMAND = 'latex-citation-stats.goToBibDefinition';
-export const COPY_CITATION_KEY_COMMAND = 'latex-citation-stats.copyCitationKey';
-export const REFRESH_COMMAND = 'latex-citation-stats.refresh';
+export const GO_TO_USAGE_COMMAND = 'latex-citation-statistics.goToUsage';
+export const GO_TO_BIB_DEFINITION_COMMAND = 'latex-citation-statistics.goToBibDefinition';
+export const COPY_CITATION_KEY_COMMAND = 'latex-citation-statistics.copyCitationKey';
+export const REFRESH_COMMAND = 'latex-citation-statistics.refresh';
 
 // Handlers take a CitationNode: the webview posts these node-shaped payloads when
 // a row is clicked or a row action is invoked, so one handler serves every row.

@@ -15,7 +15,7 @@ suite('Extension activation (integration)', () => {
 	// The dev extension is loaded under its package.json name; publisher is
 	// unset in the manifest, so find it by name rather than by a fixed id.
 	function findExtension(): vscode.Extension<unknown> | undefined {
-		return vscode.extensions.all.find((e) => e.packageJSON?.name === 'latex-citation-stats');
+		return vscode.extensions.all.find((e) => e.packageJSON?.name === 'latex-citation-statistics');
 	}
 
 	test('the extension is present and activates without error', async () => {

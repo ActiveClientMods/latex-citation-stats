@@ -15,7 +15,7 @@ import {
 	goToUsage,
 } from './commands.js';
 
-const VIEW_ID = 'latexCitationStats.view';
+const VIEW_ID = 'latexCitationStatistics.view';
 const BIB_GLOB = '**/*.bib';
 const TEX_GLOB = '**/*.tex';
 const DEFAULT_DEBOUNCE_MS = 250;
@@ -58,7 +58,7 @@ export class CitationManager {
 
 	private debounceDelay(): number {
 		const configured = vscode.workspace
-			.getConfiguration('latex-citation-stats')
+			.getConfiguration('latex-citation-statistics')
 			.get<number>('debounceDelay', DEFAULT_DEBOUNCE_MS);
 		return Number.isFinite(configured) && configured >= 0 ? configured : DEFAULT_DEBOUNCE_MS;
 	}
@@ -144,7 +144,7 @@ export class CitationManager {
 	/** Re-render when the view's presentation settings change. */
 	private createConfigListener(): vscode.Disposable {
 		return vscode.workspace.onDidChangeConfiguration((event) => {
-			if (event.affectsConfiguration('latex-citation-stats.showOverview')) {
+			if (event.affectsConfiguration('latex-citation-statistics.showOverview')) {
 				this.repaint();
 			}
 		});

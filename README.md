@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 
-# LaTeX Citation Stats
+# LaTeX Citation Statistics
 
 A real-time citation manager and tracker for LaTeX, built for VS Code. It reads your
 workspace's `.bib` bibliographies and `.tex` sources and shows, in a dedicated sidebar
@@ -115,8 +115,8 @@ Use the **Refresh** button in the view's title bar to force a full re-scan at an
 
 | Setting                              | Type    | Default | Description                                                                                                                                            |
 | ------------------------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `latex-citation-stats.debounceDelay` | number  | `250`   | Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant. |
-| `latex-citation-stats.showOverview`  | boolean | `true`  | Show the **Overview** node with total, used, unused, and citation counts at the top of the view.                                                       |
+| `latex-citation-statistics.debounceDelay` | number  | `250`   | Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant. |
+| `latex-citation-statistics.showOverview`  | boolean | `true`  | Show the **Overview** node with total, used, unused, and citation counts at the top of the view.                                                       |
 
 Sorting and filtering are controlled from the view's toolbar (and remembered across
 restarts) rather than from settings.
@@ -125,10 +125,10 @@ restarts) rather than from settings.
 
 | Command              | ID                                       | Notes                                                                                           |
 | -------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Refresh Citations    | `latex-citation-stats.refresh`           | Available from the view's title bar and the Command Palette. Triggers a full workspace re-scan. |
-| Go to Usage          | `latex-citation-stats.goToUsage`         | Left-click action on an occurrence. Jumps to the `.tex` location.                               |
-| Go to Bib Definition | `latex-citation-stats.goToBibDefinition` | Hover-action on a source; also the left-click action on unused sources.                         |
-| Copy Citation Key    | `latex-citation-stats.copyCitationKey`   | Hover-action on any source or undefined key.                                                    |
+| Refresh Citations    | `latex-citation-statistics.refresh`           | Available from the view's title bar and the Command Palette. Triggers a full workspace re-scan. |
+| Go to Usage          | `latex-citation-statistics.goToUsage`         | Left-click action on an occurrence. Jumps to the `.tex` location.                               |
+| Go to Bib Definition | `latex-citation-statistics.goToBibDefinition` | Hover-action on a source; also the left-click action on unused sources.                         |
+| Copy Citation Key    | `latex-citation-statistics.copyCitationKey`   | Hover-action on any source or undefined key.                                                    |
 
 These three navigation/clipboard commands are driven from the view rather than the Command
 Palette.

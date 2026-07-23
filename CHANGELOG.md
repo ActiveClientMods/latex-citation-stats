@@ -3,7 +3,7 @@
 
 # Change Log
 
-All notable changes to the **LaTeX Citation Stats** extension are documented in this file.
+All notable changes to the **LaTeX Citation Statistics** extension are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -12,7 +12,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 _Nothing yet._
 
-## [1.2.0] - 2026-07-23
+## [1.2.1] - 2026-07-23
+
+_Re-published under a fresh version number after the 1.2.0 Marketplace upload failed
+validation, and renamed (see **Changed** below). The feature set is otherwise identical to
+the unreleased 1.2.0._
 
 ### Added
 
@@ -29,6 +33,12 @@ _Nothing yet._
 
 ### Changed
 
+- **Renamed the extension** from `latex-citation-stats` / **LaTeX Citation Stats** to
+  `latex-citation-statistics` / **LaTeX Citation Statistics**, consistently throughout: the
+  command IDs (e.g. `latex-citation-statistics.refresh`), the setting keys
+  (`latex-citation-statistics.debounceDelay`, `latex-citation-statistics.showOverview`), and
+  the internal view identifiers. The Marketplace treats this as a new extension ID
+  (`ActiveClientMods.latex-citation-statistics`).
 - The Citations view is now rendered as a **webview** instead of a native tree, so the
   search bar and filter/sort controls can live inside the view. Existing behaviour is
   preserved: the Overview node, live counts, unused/undefined markers, click-to-navigate,

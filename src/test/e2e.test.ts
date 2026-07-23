@@ -27,7 +27,7 @@ suite('CitationManager end-to-end (real workspace)', () => {
 	}
 
 	suiteSetup(async () => {
-		const ext = vscode.extensions.all.find((e) => e.packageJSON?.name === 'latex-citation-stats');
+		const ext = vscode.extensions.all.find((e) => e.packageJSON?.name === 'latex-citation-statistics');
 		assert.ok(ext, 'extension should be discoverable');
 		api = (await ext.activate()) as CitationStatsApi;
 
