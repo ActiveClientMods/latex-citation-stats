@@ -8,7 +8,14 @@
 
 import type { BibEntry, Citation, CitationStats } from './types.js';
 import type { CitationIndex } from './citationIndex.js';
-import { DEFAULT_FILTER, DEFAULT_SORT, type FilterMode, type SortKey } from './viewOptions.js';
+import {
+	DEFAULT_FILTER,
+	DEFAULT_GROUP,
+	DEFAULT_SORT,
+	type FilterMode,
+	type GroupMode,
+	type SortKey,
+} from './viewOptions.js';
 
 /** The complete, serialisable UI state driven from the webview. */
 export interface ViewState {
@@ -22,6 +29,8 @@ export interface ViewState {
 	useRegex: boolean;
 	filter: FilterMode;
 	sort: SortKey;
+	/** How the occurrence tree is grouped (source / source→file / file / file→source). */
+	groupBy: GroupMode;
 }
 
 /** The default state used before anything is persisted. */
@@ -32,6 +41,7 @@ export const DEFAULT_STATE: ViewState = {
 	useRegex: false,
 	filter: DEFAULT_FILTER,
 	sort: DEFAULT_SORT,
+	groupBy: DEFAULT_GROUP,
 };
 
 /** A declared `.bib` source, enriched for display and filtered/sorted. */

@@ -16,6 +16,7 @@
 		useRegex: false,
 		filter: 'all',
 		sort: 'count-desc',
+		groupBy: 'source',
 	};
 	let model = null;
 	let showOverview = true;
@@ -34,7 +35,8 @@
 		question: 'M8 1a7 7 0 100 14A7 7 0 008 1zm.9 10.9H7.1v-1.8h1.8v1.8zm.1-3.2c-.5.4-.6.6-.6 1.1H7c0-.9.3-1.4.9-1.9.5-.4.7-.6.7-1 0-.5-.4-.8-1-.8s-1 .3-1.1 1L5 6c.2-1.2 1.2-2 2.6-2 1.5 0 2.5.8 2.5 2 0 .8-.4 1.3-1.1 1.7z',
 		file: 'M4 1h6l3 3v11H4V1zm5 1v3h3L9 2z',
 		copy: 'M4 2h6v2h2v10H6v-2H4V2zm1 1v8h1V4h5V3H5zm2 3h4v7H7V6z',
-		book: 'M3 2h9a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1zm1 2v8h7V4H4z',
+		// "Go to Bib Definition" — an open book, evoking the bibliography entry.
+		gotoDef: 'M7 4C5 3 3 3 1 3.5v8C3 11 5 11 7 12V4zm2 0c2-1 4-1 6-.5v8c-2-.5-4-.5-6 .5V4z',
 		graph: 'M2 2h1v11h11v1H2V2zm3 7h1v3H5V9zm3-3h1v6H8V6zm3 1h1v5h-1V7z',
 		check: 'M6.5 11.5L3 8l1-1 2.5 2.5L12 4l1 1-6.5 6.5z',
 	};
@@ -47,14 +49,16 @@
 	const content = $('content');
 	const resultInfo = $('resultInfo');
 	const tg = { case: $('tgCase'), word: $('tgWord'), regex: $('tgRegex') };
+	const groupBtn = $('btnGroup');
 	const filterBtn = $('btnFilter');
 	const sortBtn = $('btnSort');
+	const groupMenu = $('groupMenu');
 	const filterMenu = $('filterMenu');
 	const sortMenu = $('sortMenu');
 
-	// Filter/sort options are supplied by the extension (model/viewOptions) in each
-	// update message, so labels and ids live in exactly one place.
-	let options = { filters: [], sorts: [] };
+	// Group/filter/sort options are supplied by the extension (model/viewOptions)
+	// in each update message, so labels and ids live in exactly one place.
+	let options = { groups: [], filters: [], sorts: [] };
 
 	/** Turn grouped options into menu items, inserting a separator between groups. */
 	function toMenuItems(opts) {
@@ -156,19 +160,26 @@
 			html.push(renderOverview());
 		}
 
-		for (const entry of model.entries) {
-			html.push(renderEntry(entry, re));
-		}
-
-		if (model.undefinedKeys.length > 0) {
-			html.push(renderUndefinedSection(re));
-		}
-
-		if (model.entries.length === 0 && model.undefinedKeys.length === 0) {
-			html.push(`<div class="empty">No citations match the current search and filter.</div>`);
+		if (isFilePrimary()) {
+			html.push(renderFilePrimary(re));
+		} else {
+			for (const entry of model.entries) {
+				html.push(renderEntry(entry, re));
+			}
+			if (model.undefinedKeys.length > 0) {
+				html.push(renderUndefinedSection(re));
+			}
+			if (model.entries.length === 0 && model.undefinedKeys.length === 0) {
+				html.push(`<div class="empty">No citations match the current search and filter.</div>`);
+			}
 		}
 
 		content.innerHTML = html.join('');
+	}
+
+	/** True when files sit at the top of the tree (level 1 = file). */
+	function isFilePrimary() {
+		return state.groupBy === 'file' || state.groupBy === 'file-source';
 	}
 
 	function renderOverview() {
@@ -211,7 +222,7 @@
 			<span class="description">${desc}</span>
 			<span class="spacer-flex"></span>
 			<span class="actions">
-				<button class="action" data-action="def" data-key="${escapeHtml(entry.key)}" title="Go to Bib Definition">${svg(ICON.book)}</button>
+				<button class="action" data-action="def" data-key="${escapeHtml(entry.key)}" title="Go to Bib Definition">${svg(ICON.gotoDef)}</button>
 				<button class="action" data-action="copy" data-key="${escapeHtml(entry.key)}" title="Copy Citation Key">${svg(ICON.copy)}</button>
 			</span></div>`;
 
@@ -259,14 +270,161 @@
 	}
 
 	function renderOccurrences(occurrences, re, scope, key, indentClass) {
+		if (state.groupBy === 'source-file') {
+			return renderOccurrencesByFile(occurrences, scope, key, indentClass);
+		}
 		let html = '';
 		occurrences.forEach((occ, idx) => {
-			html += `<div class="row ${indentClass}" data-kind="occ" data-scope="${scope}" data-key="${escapeHtml(key)}" data-idx="${idx}" title="\\${escapeHtml(occ.command)} in ${escapeHtml(occ.relPath)} (line ${occ.displayLine})">
-				${twisty(false)}${rowIcon('file')}
-				<span class="label">${escapeHtml(occ.relPath)}:${occ.displayLine}</span>
-				<span class="description">${escapeHtml(occ.lineText)}</span></div>`;
+			html += occurrenceRow(occ, idx, scope, key, indentClass, occ.relPath + ':' + occ.displayLine);
 		});
 		return html;
+	}
+
+	/** One occurrence row. `label` is the text shown before the line preview. */
+	function occurrenceRow(occ, idx, scope, key, indentClass, label) {
+		return `<div class="row ${indentClass}" data-kind="occ" data-scope="${scope}" data-key="${escapeHtml(key)}" data-idx="${idx}" title="\\${escapeHtml(occ.command)} in ${escapeHtml(occ.relPath)} (line ${occ.displayLine})">
+			${twisty(false)}${rowIcon('file')}
+			<span class="label">${escapeHtml(label)}</span>
+			<span class="description">${escapeHtml(occ.lineText)}</span></div>`;
+	}
+
+	/**
+	 * Group a source's occurrences under one header per `.tex` file. Each header
+	 * carries the first occurrence's index so clicking it jumps into that file;
+	 * the occurrence rows keep their original index for navigation.
+	 */
+	function renderOccurrencesByFile(occurrences, scope, key, indentClass) {
+		const groups = new Map();
+		occurrences.forEach((occ, idx) => {
+			let group = groups.get(occ.relPath);
+			if (!group) {
+				group = [];
+				groups.set(occ.relPath, group);
+			}
+			group.push({ occ, idx });
+		});
+
+		const childIndent = indentClass === 'indent-2' ? 'indent-3' : 'indent-2';
+		let html = '';
+		for (const [relPath, items] of groups) {
+			html += `<div class="row ${indentClass} file-group" data-kind="fileGroup" data-scope="${scope}" data-key="${escapeHtml(key)}" data-idx="${items[0].idx}" title="${escapeHtml(relPath)} · ${items.length} occurrence${items.length === 1 ? '' : 's'}">
+				${twisty(false)}${rowIcon('file')}
+				<span class="label">${escapeHtml(relPath)}</span>
+				<span class="count-badge">${items.length}×</span></div>`;
+			for (const { occ, idx } of items) {
+				html += occurrenceRow(occ, idx, scope, key, childIndent, 'line ' + occ.displayLine);
+			}
+		}
+		return html;
+	}
+
+	// ---- File-primary grouping (level 1 = file) ---------------------------
+
+	/**
+	 * Pivot every visible occurrence into a map keyed by `.tex` file. Each source
+	 * under a file keeps its scope (`entry` / `undef`) and the original indices of
+	 * its occurrences, so navigation still resolves through the posted model.
+	 * Iterating `model.entries` (already sorted by the extension) and then the
+	 * undefined keys means sources appear under each file in the chosen sort order.
+	 */
+	function buildFileMap() {
+		const files = new Map();
+		const add = (scope, key, isUndef, title, occ, idx) => {
+			let file = files.get(occ.relPath);
+			if (!file) {
+				file = { relPath: occ.relPath, count: 0, sources: new Map() };
+				files.set(occ.relPath, file);
+			}
+			file.count++;
+			let source = file.sources.get(key);
+			if (!source) {
+				source = { scope, key, undef: isUndef, title, items: [] };
+				file.sources.set(key, source);
+			}
+			source.items.push({ occ, idx });
+		};
+		for (const entry of model.entries) {
+			entry.occurrences.forEach((occ, idx) => add('entry', entry.key, false, entry.title, occ, idx));
+		}
+		for (const u of model.undefinedKeys) {
+			u.occurrences.forEach((occ, idx) => add('undef', u.key, true, undefined, occ, idx));
+		}
+		return files;
+	}
+
+	function renderFilePrimary(re) {
+		const files = [...buildFileMap().values()].sort((a, b) => a.relPath.localeCompare(b.relPath));
+		if (files.length === 0) {
+			return renderEmptyFilePrimary();
+		}
+		let html = '';
+		for (const file of files) {
+			const fid = 'file:' + file.relPath;
+			const isOpen = expanded.has(fid);
+			html += `<div class="row group-header ${isOpen ? 'expanded' : ''}" data-kind="fileRoot" data-file="${escapeHtml(file.relPath)}" title="${escapeHtml(file.relPath)}">
+				${twisty(true)}${rowIcon('file')}<span class="label">${escapeHtml(file.relPath)}</span>
+				<span class="count-badge">${file.count}×</span></div>`;
+			if (!isOpen) {
+				continue;
+			}
+			if (state.groupBy === 'file') {
+				html += renderFileFlat(file);
+			} else {
+				html += renderFileSources(file, re);
+			}
+		}
+		return html;
+	}
+
+	/** `File` mode: every occurrence in the file, line-ordered, tagged with its key. */
+	function renderFileFlat(file) {
+		const flat = [];
+		for (const source of file.sources.values()) {
+			for (const it of source.items) {
+				flat.push({ occ: it.occ, idx: it.idx, scope: source.scope, key: source.key });
+			}
+		}
+		flat.sort((a, b) => a.occ.line - b.occ.line || a.occ.character - b.occ.character);
+		let html = '';
+		for (const it of flat) {
+			html += occurrenceRow(it.occ, it.idx, it.scope, it.key, 'indent-1', it.key + ' · line ' + it.occ.displayLine);
+		}
+		return html;
+	}
+
+	/** `File → Source` mode: the sources cited in the file, each expandable. */
+	function renderFileSources(file, re) {
+		let html = '';
+		for (const source of file.sources.values()) {
+			const sid = 'file:' + file.relPath + '::' + source.key;
+			const sOpen = expanded.has(sid);
+			const iconName = source.undef ? 'question' : 'references';
+			const iconClass = source.undef ? 'warning' : '';
+			const desc = source.undef ? 'missing entry' : source.title ? '· ' + escapeHtml(source.title) : '';
+			const defBtn = source.undef
+				? ''
+				: `<button class="action" data-action="def" data-key="${escapeHtml(source.key)}" title="Go to Bib Definition">${svg(ICON.gotoDef)}</button>`;
+			html += `<div class="row indent-1 ${sOpen ? 'expanded' : ''}" data-kind="fileSource" data-file="${escapeHtml(file.relPath)}" data-key="${escapeHtml(source.key)}" data-scope="${source.scope}">
+				${twisty(true)}${rowIcon(iconName, iconClass)}<span class="label">${highlight(source.key, re)}</span>
+				<span class="count-badge">${source.items.length}×</span>
+				<span class="description">${desc}</span>
+				<span class="spacer-flex"></span>
+				<span class="actions">${defBtn}<button class="action" data-action="copy" data-key="${escapeHtml(source.key)}" title="Copy Citation Key">${svg(ICON.copy)}</button></span></div>`;
+			if (sOpen) {
+				for (const it of source.items) {
+					html += occurrenceRow(it.occ, it.idx, source.scope, source.key, 'indent-2', 'line ' + it.occ.displayLine);
+				}
+			}
+		}
+		return html;
+	}
+
+	/** The only empty file-primary view is `Unused only`, which has no locations. */
+	function renderEmptyFilePrimary() {
+		if (state.filter === 'unused') {
+			return '<div class="empty">Unused sources are cited in no file, so there is nothing to group by file.<br />Switch <b>Group by</b> to <b>Source</b> to review unused entries.</div>';
+		}
+		return '<div class="empty">No citations match the current search and filter.</div>';
 	}
 
 	// ---- Toolbar sync -----------------------------------------------------
@@ -278,6 +436,7 @@
 		tg.case.setAttribute('aria-pressed', String(state.matchCase));
 		tg.word.setAttribute('aria-pressed', String(state.matchWholeWord));
 		tg.regex.setAttribute('aria-pressed', String(state.useRegex));
+		groupBtn.classList.toggle('modified', state.groupBy !== 'source');
 		filterBtn.classList.toggle('modified', state.filter !== 'all');
 		sortBtn.classList.toggle('modified', state.sort !== 'count-desc');
 
@@ -343,7 +502,16 @@
 
 	function openMenu(which) {
 		closeMenus();
-		if (which === 'filter') {
+		if (which === 'group') {
+			buildMenu(groupMenu, 'Group by', toMenuItems(options.groups), state.groupBy, (id) => {
+				state.groupBy = id;
+				syncToolbar();
+				pushState();
+			});
+			groupMenu.hidden = false;
+			groupBtn.classList.add('active');
+			groupBtn.setAttribute('aria-expanded', 'true');
+		} else if (which === 'filter') {
 			buildMenu(filterMenu, 'Show', toMenuItems(options.filters), state.filter, (id) => {
 				state.filter = id;
 				syncToolbar();
@@ -365,10 +533,13 @@
 	}
 
 	function closeMenus() {
+		groupMenu.hidden = true;
 		filterMenu.hidden = true;
 		sortMenu.hidden = true;
+		groupBtn.classList.remove('active');
 		filterBtn.classList.remove('active');
 		sortBtn.classList.remove('active');
+		groupBtn.setAttribute('aria-expanded', 'false');
 		filterBtn.setAttribute('aria-expanded', 'false');
 		sortBtn.setAttribute('aria-expanded', 'false');
 	}
@@ -425,7 +596,13 @@
 				// Unused entries have no occurrences; jump to the .bib definition.
 				vscode.postMessage({ type: 'goToBibDefinition', key });
 			}
-		} else if (kind === 'occ') {
+		} else if (kind === 'fileRoot') {
+			toggleExpand('file:' + row.getAttribute('data-file'));
+		} else if (kind === 'fileSource') {
+			toggleExpand('file:' + row.getAttribute('data-file') + '::' + key);
+		} else if (kind === 'occ' || kind === 'fileGroup') {
+			// A file-group header carries the index of its first occurrence, so
+			// clicking it opens that file at the first citation.
 			const scope = row.getAttribute('data-scope');
 			const idx = Number(row.getAttribute('data-idx'));
 			const list = scope === 'undef' ? model.undefinedKeys : model.entries;
@@ -463,6 +640,10 @@
 	tg.case.addEventListener('click', () => toggle('matchCase'));
 	tg.word.addEventListener('click', () => toggle('matchWholeWord'));
 	tg.regex.addEventListener('click', () => toggle('useRegex'));
+	groupBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		toggleMenu('group', groupBtn, groupMenu);
+	});
 	filterBtn.addEventListener('click', (e) => {
 		e.stopPropagation();
 		toggleMenu('filter', filterBtn, filterMenu);

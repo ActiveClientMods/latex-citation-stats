@@ -12,6 +12,27 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 _Nothing yet._
 
+## [1.2.2] - 2026-07-24
+
+### Added
+
+- **Group by menu** in the Citations view toolbar (alongside **Filter** and **Sort**) that
+  chooses how the occurrence tree is outlined across the two dimensions — source (bibkey)
+  and file:
+  - **Source** (default) — sources at the top, each expanding to its occurrences.
+  - **Source, then file** — within a source, occurrences are grouped by `.tex` file.
+  - **File, then source** — files at the top, each listing the sources it cites, which in
+    turn expand to their occurrences (undefined keys are folded in and flagged inline).
+  - **File** — files at the top, each listing every citation occurrence in line order.
+
+  Only these four outlines are offered, so every grouping is valid by construction. File
+  and per-file group headers carry an occurrence count, clicking a file group jumps to the
+  first citation in it, and the chosen grouping **persists across restarts**.
+
+### Changed
+
+- Replaced the **Go to Bib Definition** row-action icon with a clearer open-book glyph.
+
 ## [1.2.1] - 2026-07-23
 
 _Re-published under a fresh version number after the 1.2.0 Marketplace upload failed

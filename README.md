@@ -34,6 +34,14 @@ request or emits telemetry.
   distinct warning icon, so dead bibliography entries are easy to spot and prune.
 - **Expand to every occurrence.** Expanding a source reveals every individual citation
   instance as `file:line`, each with a preview of the source line.
+- **Group by source or file.** A **Group by** menu in the toolbar chooses how the
+  occurrence tree is outlined across two dimensions — source (bibkey) and file:
+  _Source_ (the classic view), _Source, then file_ (a source's occurrences grouped by
+  `.tex` file), _File, then source_ (files at the top, each listing the sources it cites),
+  and _File_ (files at the top, each listing every occurrence in line order). Only these
+  four outlines are offered, so every grouping is valid. File group headers show a per-file
+  count and jump to the first citation in the file when clicked; the choice persists across
+  restarts.
 - **Jump to the exact spot.** Clicking an occurrence opens the `.tex` file and places the
   cursor precisely on the citation key — correct line _and_ column, with the key selected.
   Clicking an _unused_ source jumps to its definition in the `.bib` file instead.
@@ -95,6 +103,7 @@ Search & filter:
 | **`Aa` Match Case**             | Makes the search case-sensitive                                     |
 | **`ab` Match Whole Word**       | Matches whole words only                                            |
 | **`.*` Use Regular Expression** | Interprets the query as a regular expression                        |
+| **Group by** button             | Source · Source, then file · File, then source · File               |
 | **Filter** button               | All · Used only · Unused only · Undefined only                      |
 | **Sort** button                 | Citation count · Author · Title · Year · Key (ascending/descending) |
 
@@ -109,6 +118,9 @@ Navigation cheat-sheet:
 | Click an **unused** source | Opens its definition in the `.bib` file       |
 | **Hover** a source         | Reveals Go to Bib Definition · Copy Key       |
 
+The toolbar's **Group by** menu chooses the outline — _Source_, _Source, then file_,
+_File, then source_, or _File_ — remembered across restarts.
+
 Use the **Refresh** button in the view's title bar to force a full re-scan at any time.
 
 ## Extension settings
@@ -118,8 +130,8 @@ Use the **Refresh** button in the view's title bar to force a full re-scan at an
 | `latex-citation-statistics.debounceDelay` | number  | `250`   | Delay in milliseconds before re-parsing a document after you stop typing. Higher values reduce CPU usage while typing; lower values feel more instant. |
 | `latex-citation-statistics.showOverview`  | boolean | `true`  | Show the **Overview** node with total, used, unused, and citation counts at the top of the view.                                                       |
 
-Sorting and filtering are controlled from the view's toolbar (and remembered across
-restarts) rather than from settings.
+Grouping, sorting, and filtering are controlled from the view's toolbar (and remembered
+across restarts) rather than from settings.
 
 ## Commands
 

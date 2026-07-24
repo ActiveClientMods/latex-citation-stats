@@ -34,16 +34,33 @@ export const SORT_OPTIONS = [
 	{ id: 'key-desc', label: 'Key (Z–A)', group: 'key' },
 ] as const satisfies readonly ViewOption<string>[];
 
+// The four valid grouping outlines. The two dimensions are Source (bibkey) and
+// File; the leaf is always the individual occurrences. Listing only these four
+// modes (rather than two independent level pickers) means every constellation is
+// valid by construction — you can never ask for the same axis twice. The `group`
+// field draws the "By source" / "By file" separator in the menu, so the menu
+// reads as a level-1 choice (source vs file) with a level-2 refinement.
+export const GROUP_OPTIONS = [
+	{ id: 'source', label: 'Source', group: 'source' },
+	{ id: 'source-file', label: 'Source, then file', group: 'source' },
+	{ id: 'file', label: 'File', group: 'file' },
+	{ id: 'file-source', label: 'File, then source', group: 'file' },
+] as const satisfies readonly ViewOption<string>[];
+
 /** Which subset of sources is shown. */
 export type FilterMode = (typeof FILTER_OPTIONS)[number]['id'];
 /** How the source list is ordered. */
 export type SortKey = (typeof SORT_OPTIONS)[number]['id'];
+/** How the occurrence tree is grouped (level 1 → level 2). */
+export type GroupMode = (typeof GROUP_OPTIONS)[number]['id'];
 
 export const DEFAULT_FILTER: FilterMode = 'all';
 export const DEFAULT_SORT: SortKey = 'count-desc';
+export const DEFAULT_GROUP: GroupMode = 'source';
 
 const FILTER_IDS: ReadonlySet<string> = new Set(FILTER_OPTIONS.map((o) => o.id));
 const SORT_IDS: ReadonlySet<string> = new Set(SORT_OPTIONS.map((o) => o.id));
+const GROUP_IDS: ReadonlySet<string> = new Set(GROUP_OPTIONS.map((o) => o.id));
 
 export function isFilterMode(value: unknown): value is FilterMode {
 	return typeof value === 'string' && FILTER_IDS.has(value);
@@ -51,4 +68,8 @@ export function isFilterMode(value: unknown): value is FilterMode {
 
 export function isSortKey(value: unknown): value is SortKey {
 	return typeof value === 'string' && SORT_IDS.has(value);
+}
+
+export function isGroupMode(value: unknown): value is GroupMode {
+	return typeof value === 'string' && GROUP_IDS.has(value);
 }

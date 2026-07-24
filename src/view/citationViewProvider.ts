@@ -2,7 +2,14 @@ import * as vscode from 'vscode';
 import type { CitationIndex } from '../model/citationIndex.js';
 import type { Citation } from '../model/types.js';
 import { buildViewModel, DEFAULT_STATE, type ViewState } from '../model/viewModel.js';
-import { FILTER_OPTIONS, SORT_OPTIONS, isFilterMode, isSortKey } from '../model/viewOptions.js';
+import {
+	FILTER_OPTIONS,
+	GROUP_OPTIONS,
+	SORT_OPTIONS,
+	isFilterMode,
+	isGroupMode,
+	isSortKey,
+} from '../model/viewOptions.js';
 import { copyCitationKey, goToBibDefinition, goToUsage } from '../commands.js';
 import { citationViewHtml } from './webviewContent.js';
 
@@ -108,7 +115,7 @@ export class CitationViewProvider implements vscode.WebviewViewProvider {
 			state: this.state,
 			// The menu labels live in one place (viewOptions); the webview renders
 			// them, so the menus can never drift from the ids the model acts on.
-			options: { filters: FILTER_OPTIONS, sorts: SORT_OPTIONS },
+			options: { groups: GROUP_OPTIONS, filters: FILTER_OPTIONS, sorts: SORT_OPTIONS },
 			model: {
 				hasBibliography: model.hasBibliography,
 				filtering: model.filtering,
@@ -172,6 +179,7 @@ function sanitizeState(state: ViewState): ViewState {
 		useRegex: Boolean(state.useRegex),
 		filter: isFilterMode(state.filter) ? state.filter : DEFAULT_STATE.filter,
 		sort: isSortKey(state.sort) ? state.sort : DEFAULT_STATE.sort,
+		groupBy: isGroupMode(state.groupBy) ? state.groupBy : DEFAULT_STATE.groupBy,
 	};
 }
 
